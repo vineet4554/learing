@@ -1,3 +1,4 @@
+// utils/geminiService.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
@@ -7,57 +8,157 @@ if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY is missing in .env file");
 }
 
+// ---------- INIT (ONCE) ----------
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Switch to a model with available quota
-// Try these in order: gemini-2.5-flash, gemini-flash-latest, or gemini-2.0-flash-lite
-const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
+// ✅ Stable + supported model
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash"
+});
 
+// ================= GENERATE TEXT =================
 export const generateText = async (prompt) => {
   try {
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    return result.response.text().trim();
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw new Error(`Gemini API Failed: ${error.message}`);
   }
 };
 
-export const generateFlashcards = async (content) => {
+// ================= GENERATE FLASHCARDS =================
+export const generateFlashcards = async (content, count = 10) => {
   try {
-    // Updated prompt to use "question" and "answer" instead of "front" and "back"
     const prompt = `
-      You are an AI teacher. Create 5-10 flashcards based on the following content.
-      
-      Content: "${content.substring(0, 3000)}" 
+Create ${count} flashcards from the content below.
 
-      Return ONLY a valid JSON array with NO additional text or markdown. Format:
-      [{"question":"What is X?","answer":"X is..."},{"question":"Define Y","answer":"Y is..."}]
-    `;
+CONTENT:
+${content.substring(0, 3000)}
+
+Return ONLY valid JSON (no markdown, no text):
+[
+  { "question": "...", "answer": "..." }
+]
+`;
 
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text();
+    let text = result.response.text().trim();
 
-    // Clean up markdown formatting
-    text = text.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+    // clean accidental markdown
+    text = text.replace(/```json|```/gi, "").trim();
 
-    const flashcards = JSON.parse(text);
-    
-    if (!Array.isArray(flashcards)) {
-      throw new Error("Response is not an array");
+    const cards = JSON.parse(text);
+
+    if (!Array.isArray(cards)) {
+      throw new Error("Flashcards response is not an array");
     }
 
-    // Transform if Gemini still returns "front"/"back" instead of "question"/"answer"
-    const transformedCards = flashcards.map(card => ({
-      question: card.question || card.front,
-      answer: card.answer || card.back
+    return cards.map(c => ({
+      question: c.question || c.front,
+      answer: c.answer || c.back
     }));
-    
-    return transformedCards;
   } catch (error) {
-    console.error("Error generating flashcards:", error);
-    throw new Error(`Failed to generate flashcards: ${error.message}`);
+    console.error("Flashcard generation error:", error);
+    throw new Error("Failed to generate flashcards");
   }
+};
+
+// ================= GENERATE QUIZ =================
+export const generateQuiz = async (content, numberOfQuestions = 5) => {
+  try {
+    const prompt = `
+Create ${numberOfQuestions} MCQ questions from the content.
+
+CONTENT:
+${content.substring(0, 3000)}
+
+Return ONLY valid JSON:
+[
+  {
+    "question": "...",
+    "options": ["A", "B", "C", "D"],
+    "correctAnswer": 0,
+    "explanation": "..."
+  }
+]
+`;
+
+    const result = await model.generateContent(prompt);
+    let text = result.response.text().trim();
+    text = text.replace(/```json|```/gi, "").trim();
+
+    const quiz = JSON.parse(text);
+
+    if (!Array.isArray(quiz)) {
+      throw new Error("Quiz response is not an array");
+    }
+
+    return quiz;
+  } catch (error) {
+    console.error("Quiz generation error:", error);
+    throw new Error("Failed to generate quiz");
+  }
+};
+
+// ================= GENERATE SUMMARY =================
+export const generateSummary = async (content) => {
+  try {
+    const prompt = `
+Summarize the content below in 200–400 words.
+
+CONTENT:
+${content.substring(0, 5000)}
+`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+  } catch (error) {
+    console.error("Summary error:", error);
+    throw new Error("Failed to generate summary");
+  }
+};
+
+// ================= CHAT WITH CONTEXT =================
+export const chatWithContext = async (question, chunks = []) => {
+  const context = chunks.map(c => c.content).join("\n\n");
+
+  const prompt = `
+Answer ONLY using the content below.
+If not found, say "Not mentioned in the document".
+
+CONTENT:
+${context}
+
+QUESTION:
+${question}
+
+ANSWER:
+`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
+};
+
+// ================= EXPLAIN CONCEPT =================
+export const explainConcept = async (concept, context = "") => {
+  const prompt = context
+    ? `
+Explain the concept using the context.
+
+CONCEPT:
+${concept}
+
+CONTEXT:
+${context.substring(0, 3000)}
+`
+    : `
+Explain the concept clearly with examples.
+
+CONCEPT:
+${concept}
+`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
 };

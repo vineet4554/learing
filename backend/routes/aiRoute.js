@@ -4,7 +4,8 @@ import {
   generateSummary,
   chat,
   explainConcept,
-  getChatHistory
+  getChatHistory,
+  generateQuiz
 } from "../controllers/aiController.js";
 
 import {protect} from "../middleware/auth.js";
@@ -14,6 +15,7 @@ router.use(protect);
 
 router.post("/generate-flashcards", generateFlashcards);
 router.post("/generate-summary", generateSummary);
+router.post("/generate-quiz", generateQuiz);
 router.post("/chat", chat);
 router.post("/explain-concept", explainConcept);
 router.get("/chat-history/:documentId", getChatHistory);

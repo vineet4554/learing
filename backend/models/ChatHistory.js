@@ -3,20 +3,20 @@ import mongoose from "mongoose";
 const chatHistorySchema = new mongoose.Schema(
   {
     userId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: "User", 
-        required: true 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User", 
+      required: true 
     },
     documentId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: "Document",
-        required: true
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Document",
+      required: true
     },
     messages: [
       {
         role: {
           type: String,
-          enum: ['user', 'assistant'],
+          enum: ["user", "assistant"],
           required: true
         },
         content: {
@@ -27,16 +27,18 @@ const chatHistorySchema = new mongoose.Schema(
           type: Date,
           default: Date.now
         },
-        relativeChunk: { 
-          type:Number,
-          default:[]
+        relativeChunks: {          
+          type: [Number],          // ARRAY of numbers
+          default: []
         }
       }
     ]
-    } ,{timestamps: true});
+  },
+  { timestamps: true }
+);
 
-    chatHistorySchema.index({ userId: 1, documentId: 1 });
+// Prevent duplicate chat histories per document per user
+chatHistorySchema.index({ userId: 1, documentId: 1 }, { unique: true });
 
 const ChatHistory = mongoose.model("ChatHistory", chatHistorySchema);
-
 export default ChatHistory;

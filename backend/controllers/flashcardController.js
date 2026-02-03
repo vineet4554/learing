@@ -142,9 +142,11 @@ export const reviewFlashcard = async (req, res, next) => {
 
 
 // ================= TOGGLE STAR FLASHCARD =================
+// Controller updated
 export const toggleStarFlashcard = async (req, res, next) => {
   try {
-    const { id, cardId } = req.params;
+    const { id } = req.params;
+    const { cardId } = req.body; // Get from body instead
 
     if (
       !mongoose.Types.ObjectId.isValid(id) ||
@@ -189,6 +191,9 @@ export const toggleStarFlashcard = async (req, res, next) => {
     next(error);
   }
 };
+
+
+
 
 
 

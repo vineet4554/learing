@@ -105,9 +105,8 @@ const quizSchema = new mongoose.Schema(
 );
 
 // 🔹 Auto-set totalQuestions
-quizSchema.pre("save", function (next) {
+quizSchema.pre("save", function () {
   this.totalQuestions = this.questions.length;
-  next();
 });
 
 // 🔹 Index for faster queries
