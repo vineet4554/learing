@@ -9,6 +9,9 @@ import authRoutes from "./routes/authRoute.js";
 import documentRoute from "./routes/documentRoute.js";
 import flashcardRoute from "./routes/flashcardRoute.js";
 import aiRoutes from "./routes/aiRoute.js";
+import quiz from "./routes/quizRoute.js";
+import progressRoute from "./routes/progressRoute.js";
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -30,9 +33,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-
-
 // Static uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -40,9 +40,12 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoute);
 app.use("/api/flashcards", flashcardRoute);
-app.use("/api/ai",aiRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/quiz", quiz);
+app.use("/api/progress", progressRoute);
+
 // 404
-app.use((req, res, next) => {
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: "API endpoint not found",
@@ -55,7 +58,7 @@ app.use(errorHandler);
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Unhandled promise rejection
