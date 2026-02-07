@@ -11,11 +11,10 @@ import flashcardRoute from "./routes/flashcardRoute.js";
 import aiRoutes from "./routes/aiRoute.js";
 import quiz from "./routes/quizRoute.js";
 import progressRoute from "./routes/progressRoute.js";
-
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 
@@ -25,7 +24,7 @@ connectDB();
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
