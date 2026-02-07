@@ -1,6 +1,6 @@
 import React from 'react'
 
-function NotFoundPage() {
+function QuizResultpage() {
   return (
     <div>
       
@@ -8,4 +8,4 @@ function NotFoundPage() {
   )
 }
 
-export default NotFoundPage
+export default QuizResultpage
