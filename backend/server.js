@@ -40,7 +40,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoute);
 app.use("/api/flashcards", flashcardRoute);
 app.use("/api/ai", aiRoutes);
-app.use("/api/quiz", quiz);
+app.use("/api/quizzes", quiz);
 app.use("/api/progress", progressRoute);
 
 // 404

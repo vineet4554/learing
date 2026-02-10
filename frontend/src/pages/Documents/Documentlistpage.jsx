@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axiosinstance";
-import { API_PATHS } from "../../utils/apiPaths";
+import documentService from "../../services/documentService";
+import Spinner from "../../components/common/Spinner.jsx";
 import {
   FileText,
   Upload,
@@ -12,11 +12,15 @@ import {
   Search,
   Plus,
   X,
+  ArrowLeft,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
-function Documentlistpage() {
+export default function DocumentListPage() {
   const navigate = useNavigate();
+
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,330 +35,271 @@ function Documentlistpage() {
 
   const fetchDocuments = async () => {
     try {
-      const response = await axiosInstance.get(API_PATHS.DOCUMENTS.GET_DOCUMENTS);
-      
-      if (response.data.success) {
-        setDocuments(response.data.data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching documents:", error);
-      toast.error("Failed to load documents");
+      const res = await documentService.getDocuments();
+
+      const docsArray = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res?.data?.data)
+        ? res.data.data
+        : [];
+
+      setDocuments(docsArray);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Failed to load documents");
     } finally {
       setLoading(false);
     }
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Check file type
-      const validTypes = ['application/pdf', 'text/plain', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!validTypes.includes(file.type)) {
-        toast.error("Please upload a PDF, TXT, or DOCX file");
-        return;
-      }
-      
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size must be less than 10MB");
-        return;
-      }
-      
-      setUploadFile(file);
-      // Auto-fill title from filename
-      if (!uploadTitle) {
-        const fileName = file.name.split('.').slice(0, -1).join('.');
-        setUploadTitle(fileName);
-      }
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      "application/pdf",
+      "text/plain",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!validTypes.includes(file.type)) {
+      toast.error("Only PDF, TXT, DOCX allowed");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Max file size is 10MB");
+      return;
+    }
+
+    setUploadFile(file);
+
+    if (!uploadTitle) {
+      setUploadTitle(file.name.replace(/\.[^/.]+$/, ""));
     }
   };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    
+
     if (!uploadFile || !uploadTitle) {
-      toast.error("Please select a file and enter a title");
+      toast.error("Provide title and file");
       return;
     }
 
-    setUploading(true);
-
     try {
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      formData.append('title', uploadTitle);
+      setUploading(true);
 
-      const response = await axiosInstance.post(
-        API_PATHS.DOCUMENTS.UPLOAD,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const res = await documentService.uploadDocument(uploadFile, uploadTitle);
 
-      if (response.data.success) {
-        toast.success("Document uploaded successfully!");
-        setUploadModalOpen(false);
-        setUploadFile(null);
-        setUploadTitle("");
-        fetchDocuments(); // Refresh the list
+      if (res?.success === false) {
+        throw new Error(res?.message || "Upload failed");
       }
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(error.response?.data?.message || "Failed to upload document");
+
+      toast.success("Uploaded successfully");
+      setUploadModalOpen(false);
+      setUploadFile(null);
+      setUploadTitle("");
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = async (docId) => {
-    if (!window.confirm("Are you sure you want to delete this document?")) {
-      return;
-    }
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this document?")) return;
 
     try {
-      await axiosInstance.delete(API_PATHS.DOCUMENTS.DELETE_DOCUMENT(docId));
-      toast.success("Document deleted successfully");
-      fetchDocuments(); // Refresh the list
-    } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("Failed to delete document");
+      await documentService.deleteDocument(id);
+      toast.success("Deleted");
+      fetchDocuments();
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.message || "Delete failed");
     }
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  const formatFileSize = (bytes = 0) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const formatTimestamp = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  const formatTime = (date) => {
+    if (!date) return "";
 
-    if (diffMins < 60) return `Uploaded ${diffMins} minutes ago`;
-    if (diffHours < 24) return `Uploaded ${diffHours} hours ago`;
-    return `Uploaded ${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    const diff = Date.now() - new Date(date).getTime();
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (mins < 60) return `${mins} min ago`;
+    if (hrs < 24) return `${hrs} hr ago`;
+    return `${days} day${days > 1 ? "s" : ""} ago`;
   };
 
-  const filteredDocuments = documents.filter(doc =>
-    doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.fileName?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filtered = (documents || []).filter((d) =>
+    (d?.title || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const DocumentCard = ({ doc }) => (
-    <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group relative">
-      {/* Delete button */}
+    <motion.div
+      whileHover={{ y: -6, scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 200 }}
+      className="bg-white/80 backdrop-blur rounded-3xl p-6 shadow-sm hover:shadow-2xl transition relative group cursor-pointer border border-gray-100"
+      onClick={() => navigate(`/documents/${doc._id}`)}
+    >
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleDelete(doc._id);
         }}
-        className="absolute top-4 right-4 w-8 h-8 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-xl transition"
       >
         <Trash2 className="w-4 h-4" />
       </button>
 
-      <div
-        onClick={() => navigate(`/documents/${doc._id}`)}
-        className="cursor-pointer"
-      >
-        {/* Icon */}
-        <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center mb-4">
-          <FileText className="w-6 h-6 text-white" />
-        </div>
-
-        {/* Title */}
-        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
-          {doc.title || 'Untitled Document'}
-        </h3>
-
-        {/* File size */}
-        <p className="text-sm text-gray-600 mb-4">
-          {formatFileSize(doc.fileSize || 0)}
-        </p>
-
-        {/* Stats */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-1 text-purple-600">
-            <BookOpen className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              {doc.flashcardCount || 0} Flashcards
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-emerald-600">
-            <FileQuestion className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              {doc.quizCount || 0} Quizzes
-            </span>
-          </div>
-        </div>
-
-        {/* Timestamp */}
-        <div className="flex items-center gap-2 text-gray-500">
-          <Clock className="w-4 h-4" />
-          <span className="text-xs">{formatTimestamp(doc.createdAt)}</span>
-        </div>
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 flex items-center justify-center mb-5 shadow-lg">
+        <FileText className="text-white w-7 h-7" />
       </div>
-    </div>
+
+      <h3 className="font-semibold text-gray-900 line-clamp-1 text-lg mb-1">
+        {doc.title || "Untitled"}
+      </h3>
+
+      <p className="text-xs text-gray-500 mb-4">{formatFileSize(doc.fileSize)}</p>
+
+      <div className="flex gap-4 text-xs font-semibold mb-4">
+        <span className="flex items-center gap-1 text-purple-600 bg-purple-50 px-2 py-1 rounded-lg">
+          <BookOpen className="w-4 h-4" /> {doc.flashcardCount || 0}
+        </span>
+        <span className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+          <FileQuestion className="w-4 h-4" /> {doc.quizCount || 0}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1 text-gray-400 text-xs">
+        <Clock className="w-4 h-4" /> {formatTime(doc.createdAt)}
+      </div>
+    </motion.div>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading documents...</p>
-        </div>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Documents</h1>
-            <p className="text-gray-600">Manage and organize your learning materials</p>
+      <div className="sticky top-0 z-30 backdrop-blur bg-white/70 border-b">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-xl hover:bg-gray-100 transition"
+            >
+              <ArrowLeft />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                My Documents <Sparkles className="w-5 h-5 text-emerald-500" />
+              </h1>
+              <p className="text-sm text-gray-500">Organize your smart learning files</p>
+            </div>
           </div>
+
           <button
             onClick={() => setUploadModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-semibold px-6 py-3 rounded-xl hover:from-emerald-500 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl"
+            className="flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-teal-500 text-white px-5 py-2.5 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition"
           >
-            <Plus className="w-5 h-5" />
-            Upload Document
+            <Plus className="w-4 h-4" /> Upload
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Search + Grid */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
-            />
-          </div>
+        <div className="relative mb-8">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search your documents..."
+            className="w-full pl-12 pr-4 py-3 border-2 rounded-2xl outline-none focus:border-emerald-400 shadow-sm"
+          />
         </div>
 
-        {/* Documents Grid */}
-        {filteredDocuments.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredDocuments.map((doc) => (
+        {filtered.length ? (
+          <motion.div
+            layout
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          >
+            {filtered.map((doc) => (
               <DocumentCard key={doc._id} doc={doc} />
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <div className="text-center py-16">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">
-              {searchQuery ? 'No documents found' : 'No documents yet'}
-            </p>
-            {!searchQuery && (
-              <button
-                onClick={() => setUploadModalOpen(true)}
-                className="text-emerald-500 font-semibold hover:text-emerald-600"
-              >
-                Upload your first document
-              </button>
-            )}
+          <div className="text-center py-24 text-gray-400">
+            <FileText className="mx-auto w-16 h-16 mb-4 opacity-40" />
+            <p className="text-lg font-medium">No documents found</p>
+            <p className="text-sm">Upload a file to get started</p>
           </div>
         )}
       </div>
 
       {/* Upload Modal */}
       {uploadModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full relative">
-            {/* Close button */}
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl p-8 w-full max-w-md relative shadow-2xl"
+          >
             <button
-              onClick={() => {
-                setUploadModalOpen(false);
-                setUploadFile(null);
-                setUploadTitle("");
-              }}
-              className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center transition-colors"
+              onClick={() => setUploadModalOpen(false)}
+              className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-xl"
             >
-              <X className="w-5 h-5 text-gray-600" />
+              <X />
             </button>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Upload Document
-            </h2>
+            <h2 className="text-2xl font-bold mb-6">Upload Document</h2>
 
             <form onSubmit={handleUpload} className="space-y-5">
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Document Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
-                  placeholder="Enter document title"
-                />
-              </div>
+              <input
+                required
+                value={uploadTitle}
+                onChange={(e) => setUploadTitle(e.target.value)}
+                placeholder="Document title"
+                className="w-full border-2 rounded-2xl px-4 py-3 outline-none focus:border-emerald-400"
+              />
 
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Select File
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    onChange={handleFileChange}
-                    accept=".pdf,.txt,.docx"
-                    className="hidden"
-                    id="file-upload"
-                    required
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 border-dashed rounded-xl cursor-pointer hover:border-emerald-400 transition-colors"
-                  >
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-600">
-                      {uploadFile ? uploadFile.name : 'Choose file (PDF, TXT, DOCX)'}
-                    </span>
-                  </label>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Maximum file size: 10MB
-                </p>
-              </div>
+              <label className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-gray-500 cursor-pointer hover:border-emerald-400 transition">
+                <Upload className="mb-3 w-6 h-6" />
+                <span className="text-sm font-medium">
+                  {uploadFile ? uploadFile.name : "Choose PDF, TXT, or DOCX"}
+                </span>
+                <input type="file" hidden accept=".pdf,.txt,.docx" onChange={handleFileChange} />
+              </label>
 
-              {/* Submit */}
               <button
-                type="submit"
                 disabled={uploading}
-                className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-semibold py-3.5 rounded-xl hover:from-emerald-500 hover:to-teal-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl hover:scale-[1.02] transition disabled:opacity-60"
               >
-                {uploading ? 'Uploading...' : 'Upload Document'}
+                {uploading ? "Uploading..." : "Upload Document"}
               </button>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
   );
 }
-
-export default Documentlistpage;

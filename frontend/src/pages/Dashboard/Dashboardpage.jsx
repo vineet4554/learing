@@ -1,33 +1,23 @@
 import React, { useState, useEffect } from "react";
+import Spinner from '../../components/common/Spinner.jsx';
+import progressService from '../../services/progressService.js';
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/Authcontext";
-import axiosInstance from "../../utils/axiosinstance";
-import { API_PATHS } from "../../utils/apiPaths";
 import {
   FileText,
   BookOpen,
-  FileQuestion,
   Clock,
   TrendingUp,
-  Calendar,
-  Upload,
-  CheckCircle,
+  BrainCircuit,
+  Eye,
+  AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
 function Dashboardpage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  const [stats, setStats] = useState({
-    totalDocuments: 0,
-    totalFlashcards: 0,
-    totalQuizzes: 0,
-    studyStreak: 0,
-  });
-  
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
@@ -35,258 +25,292 @@ function Dashboardpage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await axiosInstance.get(API_PATHS.PROGRESS.GET_DASHBOARD);
+      setLoading(true);
+      setError(null);
       
-      console.log('Dashboard data:', response.data);
+      // The service already returns response.data, so we use it directly
+      const data = await progressService.getDashboardData();
+      console.log('Dashboard data:', data);
       
-      if (response.data.success) {
-        const { overview, studyStreak, recentActivity: activity } = response.data.data;
-        
-        // Set stats from overview
-        setStats({
-          totalDocuments: overview.totalDocuments || 0,
-          totalFlashcards: overview.totalFlashcards || 0,
-          totalQuizzes: overview.totalQuizzes || 0,
-          studyStreak: studyStreak || 0,
-        });
-
-        // Combine and format recent activity
-        const allActivity = [];
-        
-        // Add recent documents
-        if (activity.documents && activity.documents.length > 0) {
-          activity.documents.forEach(doc => {
-            allActivity.push({
-              id: doc._id,
-              type: "document",
-              title: doc.title,
-              subtitle: doc.fileName,
-              timestamp: new Date().toLocaleString(), // Use actual timestamp if available
-              status: doc.status,
-            });
-          });
-        }
-        
-        // Add recent flashcards
-        if (activity.flashcards && activity.flashcards.length > 0) {
-          activity.flashcards.forEach(flashcard => {
-            allActivity.push({
-              id: flashcard._id,
-              type: "flashcard",
-              title: `Flashcard Set: ${flashcard.documentId?.title || 'Unknown'}`,
-              timestamp: new Date(flashcard.createdAt).toLocaleString(),
-              documentId: flashcard.documentId?._id,
-            });
-          });
-        }
-        
-        // Add recent quizzes
-        if (activity.quizzes && activity.quizzes.length > 0) {
-          activity.quizzes.forEach(quiz => {
-            allActivity.push({
-              id: quiz._id,
-              type: "quiz",
-              title: quiz.title,
-              subtitle: `Score: ${quiz.score}/${quiz.totalQuestions}`,
-              timestamp: new Date(quiz.createdAt).toLocaleString(),
-              documentId: quiz.documentId?._id,
-            });
-          });
-        }
-        
-        // Sort by timestamp (most recent first) and take top 10
-        setRecentActivity(allActivity.slice(0, 10));
-      }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      toast.error("Failed to load dashboard data");
-      
-      setStats({
-        totalDocuments: 0,
-        totalFlashcards: 0,
-        totalQuizzes: 0,
-        studyStreak: 0,
-      });
-      setRecentActivity([]);
+      setDashboardData(data);
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+      setError(err.message || 'Failed to fetch dashboard data');
+      toast.error(err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const StatCard = ({ icon: Icon, label, value, color, bgColor }) => (
-    <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 uppercase tracking-wide mb-2">
-            {label}
-          </p>
-          <h3 className="text-3xl font-bold text-gray-900">{value}</h3>
-        </div>
-        <div
-          className={`w-14 h-14 ${bgColor} rounded-xl flex items-center justify-center`}
-        >
-          <Icon className={`w-7 h-7 ${color}`} />
-        </div>
-      </div>
-    </div>
-  );
+  // Helper function to get navigation path based on activity type
+  const getActivityNavigationPath = (activity) => {
+    const type = activity.type?.toLowerCase() || '';
+    const documentId = activity.documentId || activity.document_id;
+    const flashcardId = activity.flashcardId || activity.flashcard_id;
+    const quizId = activity.quizId || activity.quiz_id;
 
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'document':
-        return FileText;
-      case 'flashcard':
-        return BookOpen;
-      case 'quiz':
-        return FileQuestion;
-      default:
-        return Clock;
+    // Navigate based on activity type
+    if (type.includes('document')) {
+      return documentId ? `/documents/${documentId}` : '/documents';
+    } else if (type.includes('flashcard')) {
+      return documentId ? `/documents/${documentId}/flashcards` : '/flashcards';
+    } else if (type.includes('quiz')) {
+      return quizId ? `/quizzes/${quizId}` : '/documents';
     }
-  };
-
-  const getActivityAction = (activity) => {
-    switch (activity.type) {
-      case 'document':
-        return activity.status === 'failed' 
-          ? 'Upload Failed' 
-          : 'Uploaded Document';
-      case 'flashcard':
-        return 'Generated Flashcards';
-      case 'quiz':
-        return 'Completed Quiz';
-      default:
-        return 'Activity';
-    }
+    
+    // Default fallback
+    return documentId ? `/documents/${documentId}` : '/documents';
   };
 
   const handleActivityClick = (activity) => {
-    if (activity.type === 'document' && activity.status !== 'failed') {
-      navigate(`/documents/${activity.id}`);
-    } else if (activity.type === 'flashcard' && activity.documentId) {
-      navigate(`/documents/${activity.documentId}/flashcards`);
-    } else if (activity.type === 'quiz') {
-      navigate(`/quizzes/${activity.id}/results`);
-    }
+    const path = getActivityNavigationPath(activity);
+    navigate(path);
   };
 
-  const ActivityItem = ({ activity }) => {
-    const Icon = getActivityIcon(activity.type);
-    const actionText = getActivityAction(activity);
-    
-    return (
-      <div className="flex items-start justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors group">
-        <div className="flex items-start gap-4 flex-1">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            activity.status === 'failed' ? 'bg-red-100' : 'bg-blue-100'
-          }`}>
-            <Icon className={`w-4 h-4 ${
-              activity.status === 'failed' ? 'text-red-600' : 'text-blue-600'
-            }`} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 mb-1">
-              {actionText}: {activity.title}
-            </p>
-            {activity.subtitle && (
-              <p className="text-xs text-gray-500 mb-1">{activity.subtitle}</p>
-            )}
-            <p className="text-xs text-gray-500">{activity.timestamp}</p>
-          </div>
-        </div>
-        {activity.status !== 'failed' && (
-          <button
-            onClick={() => handleActivityClick(activity)}
-            className="text-emerald-500 text-sm font-semibold hover:text-emerald-600 transition opacity-0 group-hover:opacity-100 flex-shrink-0"
-          >
-            View
-          </button>
-        )}
-      </div>
-    );
-  };
-
+  // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <Spinner />
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={fetchDashboardData}
+            className="px-6 py-3 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-emerald-500/25"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Track your learning progress and activity</p>
+  // Empty State - only show if no data at all
+  if (!dashboardData || !dashboardData.data) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="w-8 h-8 text-gray-400" />
+          </div>
+          <p className="text-gray-600 text-lg mb-2">No dashboard data available.</p>
+          <p className="text-gray-500 text-sm mb-6">Start by uploading your first document</p>
+          <button
+            onClick={() => navigate('/documents')}
+            className="px-6 py-3 bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-emerald-500/25"
+          >
+            Upload Your First Document
+          </button>
         </div>
       </div>
+    );
+  }
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={FileText}
-            label="Total Documents"
-            value={stats.totalDocuments}
-            color="text-blue-600"
-            bgColor="bg-blue-100"
-          />
-          <StatCard
-            icon={BookOpen}
-            label="Total Flashcards"
-            value={stats.totalFlashcards}
-            color="text-purple-600"
-            bgColor="bg-purple-100"
-          />
-          <StatCard
-            icon={FileQuestion}
-            label="Total Quizzes"
-            value={stats.totalQuizzes}
-            color="text-emerald-600"
-            bgColor="bg-emerald-100"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Study Streak"
-            value={`${stats.studyStreak} days`}
-            color="text-orange-600"
-            bgColor="bg-orange-100"
-          />
-        </div>
+  // Extract the nested data object
+  const data = dashboardData.data || dashboardData;
+  const overview = data.overview || {};
+  
+  const stats = [
+    {
+      label: 'TOTAL DOCUMENTS',
+      value: overview.totalDocuments || 0,
+      icon: FileText,
+      bgGradient: 'from-blue-400 to-cyan-500',
+      shadowColor: 'shadow-blue-500/20',
+    },
+    {
+      label: 'TOTAL FLASHCARDS',
+      value: overview.totalFlashcards || 0,
+      icon: BookOpen,
+      bgGradient: 'from-purple-400 to-pink-500',
+      shadowColor: 'shadow-purple-500/20',
+    },
+    {
+      label: 'TOTAL QUIZZES',
+      value: overview.totalQuizzes || overview.toatalQuizzes || 0,
+      icon: BrainCircuit,
+      bgGradient: 'from-emerald-400 to-teal-500',
+      shadowColor: 'shadow-emerald-500/20',
+    }
+  ];
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+  // Format recent activities - combine all activity types
+  const recentActivityData = data.recentActivity || {};
+  
+  // Create a unified activity list
+  const allActivities = [];
+  
+  // Add documents
+  if (recentActivityData.documents && recentActivityData.documents.length > 0) {
+    recentActivityData.documents.forEach(doc => {
+      allActivities.push({
+        id: doc._id,
+        type: 'Accessed Document',
+        title: doc.title,
+        documentId: doc._id,
+        timestamp: doc.updatedAt || doc.createdAt,
+        icon: FileText
+      });
+    });
+  }
+  
+  // Add flashcards
+  if (recentActivityData.flashcards && recentActivityData.flashcards.length > 0) {
+    recentActivityData.flashcards.forEach(flashcard => {
+      allActivities.push({
+        id: flashcard._id,
+        type: 'Created Flashcard Set',
+        title: flashcard.documentId?.title || 'Flashcard Set',
+        documentId: flashcard.documentId?._id || flashcard.documentId,
+        timestamp: flashcard.createdAt,
+        icon: BookOpen
+      });
+    });
+  }
+  
+  // Add quizzes
+  if (recentActivityData.quizzes && recentActivityData.quizzes.length > 0) {
+    recentActivityData.quizzes.forEach(quiz => {
+      allActivities.push({
+        id: quiz._id,
+        type: 'Created Quiz',
+        title: quiz.title || 'Quiz',
+        documentId: quiz.documentId?._id || quiz.documentId,
+        quizId: quiz._id,
+        timestamp: quiz.createdAt,
+        icon: BrainCircuit,
+        meta: `${quiz.totalQuestions} questions`
+      });
+    });
+  }
+  
+  // Sort by timestamp (most recent first)
+  const recentActivities = allActivities
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+    .slice(0, 10); // Show only the 10 most recent activities
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-gray-500">Track your learning progress and activity</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={index}
+              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-gray-500 tracking-wide mb-3">
+                    {stat.label}
+                  </p>
+                  <p className="text-4xl font-bold text-gray-900">
+                    {stat.value}
+                  </p>
+                </div>
+                <div className={`w-14 h-14 bg-gradient-to-br ${stat.bgGradient} rounded-2xl flex items-center justify-center shadow-lg ${stat.shadowColor}`}>
+                  <Icon className="w-7 h-7 text-white" />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Recent Activity Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
               <Clock className="w-5 h-5 text-gray-600" />
             </div>
             <h2 className="text-xl font-bold text-gray-900">Recent Activity</h2>
           </div>
+        </div>
 
-          <div className="space-y-2">
-            {recentActivity.length > 0 ? (
-              recentActivity.map((activity, index) => (
-                <ActivityItem key={`${activity.type}-${activity.id}-${index}`} activity={activity} />
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No recent activity</p>
-                <button
-                  onClick={() => navigate("/documents")}
-                  className="mt-4 text-emerald-500 font-semibold hover:text-emerald-600"
+        <div className="divide-y divide-gray-100">
+          {recentActivities.length > 0 ? (
+            recentActivities.map((activity, index) => {
+              const ActivityIcon = activity.icon || Clock;
+              return (
+                <div
+                  key={activity.id || index}
+                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer group"
+                  onClick={() => handleActivityClick(activity)}
                 >
-                  Upload your first document
-                </button>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <ActivityIcon className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 font-medium mb-1">
+                            {activity.type}: {activity.title}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>
+                              {activity.timestamp ? new Date(activity.timestamp).toLocaleString('en-US', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false
+                              }) : 'No date available'}
+                            </span>
+                            {activity.meta && (
+                              <>
+                                <span>•</span>
+                                <span>{activity.meta}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button 
+                      className="px-4 py-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleActivityClick(activity);
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-gray-400" />
               </div>
-            )}
-          </div>
+              <p className="text-gray-500 text-sm">No recent activity yet</p>
+              <p className="text-gray-400 text-xs mt-1">Your activity will appear here</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
