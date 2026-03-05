@@ -1,4 +1,4 @@
-import axiosInstance from "../utils/axiosinstance.js";
+import axiosInstance from "../utils/axiosInstance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 const getAllFlashcardSets = async () => {
@@ -27,10 +27,12 @@ const getFlashcardsForDocument = async (documentId) => {
   }
 };
 
-const reviewFlashcard = async (cardId, cardIndex) => {
+// cardIndex: index of the card within the set
+// flashcardSetId: _id of the flashcard set document
+const reviewFlashcard = async (flashcardSetId, cardIndex) => {
   try {
     const response = await axiosInstance.post(
-      API_PATHS.FLASHCARDS.REVIEW_FLASHCARD(cardId),
+      API_PATHS.FLASHCARDS.REVIEW_FLASHCARD(flashcardSetId),
       { cardIndex }
     );
     return response.data;
@@ -41,10 +43,11 @@ const reviewFlashcard = async (cardId, cardIndex) => {
   }
 };
 
-const toggleStar = async (cardId) => {
+const toggleStar = async (flashcardSetId, cardIndex) => {
   try {
-    const response = await axiosInstance.put(
-      API_PATHS.FLASHCARDS.TOGGLE_STAR(cardId)
+    const response = await axiosInstance.post(
+      API_PATHS.FLASHCARDS.TOGGLE_STAR(flashcardSetId),
+      { cardIndex }
     );
     return response.data;
   } catch (error) {

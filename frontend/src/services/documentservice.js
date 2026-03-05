@@ -1,4 +1,4 @@
-import axiosInstance from "../utils/axiosinstance.js";
+import axiosInstance from "../utils/axiosInstance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 // Get all documents
@@ -34,11 +34,26 @@ const uploadDocument = async (file, title) => {
   formData.append("title", title);
 
   const res = await axiosInstance.post(
-    "/api/documents/upload",
+    API_PATHS.DOCUMENTS.UPLOAD,
     formData
   );
 
   return res.data;
+};
+
+// Update document (e.g., title)
+const updateDocument = async (id, data) => {
+  try {
+    const response = await axiosInstance.put(
+      API_PATHS.DOCUMENTS.UPDATE_DOCUMENT(id),
+      data
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || {
+      message: "Failed to update document",
+    };
+  }
 };
 
 // Delete document
@@ -122,6 +137,7 @@ const documentService = {
   getDocuments,
   getDocumentById,
   uploadDocument,
+  updateDocument,
   deleteDocument,
   
   // AI operations

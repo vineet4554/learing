@@ -141,20 +141,15 @@ export const reviewFlashcard = async (req, res, next) => {
 };
 
 
-// ================= TOGGLE STAR FLASHCARD =================
-// Controller updated
 export const toggleStarFlashcard = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { cardId } = req.body; // Get from body instead
+    const { cardId, cardIndex } = req.body;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(id) ||
-      !mongoose.Types.ObjectId.isValid(cardId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid ID format",
+        message: "Invalid flashcard set ID format",
       });
     }
 
@@ -170,12 +165,28 @@ export const toggleStarFlashcard = async (req, res, next) => {
       });
     }
 
-    const card = flashcardSet.cards.id(cardId);
+    let card = null;
 
-    if (!card) {
-      return res.status(404).json({
+    // Prefer cardId if provided and valid
+    if (cardId && mongoose.Types.ObjectId.isValid(cardId)) {
+      card = flashcardSet.cards.id(cardId);
+
+      if (!card) {
+        return res.status(404).json({
+          success: false,
+          message: "Card not found",
+        });
+      }
+    } else if (
+      typeof cardIndex === "number" &&
+      cardIndex >= 0 &&
+      cardIndex < flashcardSet.cards.length
+    ) {
+      card = flashcardSet.cards[cardIndex];
+    } else {
+      return res.status(400).json({
         success: false,
-        message: "Card not found",
+        message: "Invalid card identifier",
       });
     }
 

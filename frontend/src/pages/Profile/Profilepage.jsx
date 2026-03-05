@@ -100,7 +100,11 @@ function StylishProfilePage() {
 
       if (response.success) {
         toast.success("Password changed successfully");
-        setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
       }
     } catch (error) {
       toast.error(error.message || "Failed to change password");
@@ -110,38 +114,67 @@ function StylishProfilePage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      
+    <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
+      <div className="bg-white/95 rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-7">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4 sm:gap-5 min-w-0">
+            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center text-2xl sm:text-3xl font-bold shadow-lg shadow-emerald-500/20">
+              {profileData.username?.[0]?.toUpperCase() || "U"}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wider text-emerald-600 font-semibold">
+                Profile
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
+                Profile Settings
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Keep your account details current and secure your access.
+              </p>
+            </div>
+          </div>
 
-      {/* 🔹 Main Content */}
-      <div className="flex-1 p-8 space-y-6">
-        <div className="flex items-center justify-between">
-  <h1 className="text-3xl font-bold">Profile Settings</h1>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <button
+              onClick={handleDeleteAccount}
+              className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl flex items-center gap-2 hover:bg-red-100 border border-red-100 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Profile
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                navigate("/login");
+              }}
+              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl flex items-center gap-2 hover:bg-gray-200 transition-colors"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
 
-  <button
-    onClick={handleDeleteAccount}
-    className="px-5 py-2 bg-red-500 text-white rounded-xl flex items-center gap-2 hover:bg-red-600"
-  >
-    <Trash2 className="w-4 h-4" /> Delete Profile
-  </button>
-</div>
-
-        {/* User Info */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex justify-between mb-4">
-            <h2 className="text-xl font-semibold">User Information</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
+        <div className="bg-white/95 rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">User Information</h2>
+              <p className="text-sm text-gray-500">
+                Manage how your profile appears across the app.
+              </p>
+            </div>
 
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-lg flex items-center gap-2"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-400 to-teal-500 text-white rounded-xl flex items-center gap-2 font-medium shadow-lg shadow-emerald-500/20"
               >
                 <Edit2 className="w-4 h-4" /> Edit
               </button>
             ) : (
               <button
                 onClick={() => setEditing(false)}
-                className="px-4 py-2 bg-gray-200 rounded-lg flex items-center gap-2"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl flex items-center gap-2 hover:bg-gray-200 transition-colors"
               >
                 <X className="w-4 h-4" /> Cancel
               </button>
@@ -149,56 +182,95 @@ function StylishProfilePage() {
           </div>
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">
-            <input
-              name="username"
-              value={profileData.username}
-              onChange={handleProfileChange}
-              disabled={!editing}
-              className="w-full p-3 border rounded-xl"
-              placeholder="Username"
-            />
+            <label className="block">
+              <span className="text-xs uppercase tracking-widest text-gray-500">
+                Username
+              </span>
+              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3">
+                <User className="w-4 h-4 text-emerald-500" />
+                <input
+                  name="username"
+                  value={profileData.username}
+                  onChange={handleProfileChange}
+                  disabled={!editing}
+                  className="w-full bg-transparent text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:text-gray-500"
+                  placeholder="Username"
+                />
+              </div>
+            </label>
 
-            <input
-              name="email"
-              value={profileData.email}
-              onChange={handleProfileChange}
-              disabled={!editing}
-              className="w-full p-3 border rounded-xl"
-              placeholder="Email"
-            />
+            <label className="block">
+              <span className="text-xs uppercase tracking-widest text-gray-500">
+                Email Address
+              </span>
+              <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3">
+                <Mail className="w-4 h-4 text-cyan-500" />
+                <input
+                  name="email"
+                  value={profileData.email}
+                  onChange={handleProfileChange}
+                  disabled={!editing}
+                  className="w-full bg-transparent text-gray-900 placeholder:text-gray-400 focus:outline-none disabled:text-gray-500"
+                  placeholder="Email"
+                />
+              </div>
+            </label>
 
             {editing && (
-              <button className="px-6 py-3 bg-emerald-500 text-white rounded-xl flex items-center gap-2">
-                <Save className="w-4 h-4" /> Save Changes
+              <button
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-emerald-400 to-teal-500 text-white rounded-xl flex items-center gap-2 font-semibold shadow-lg shadow-emerald-500/20 disabled:opacity-60"
+              >
+                <Save className="w-4 h-4" />
+                {loading ? "Saving..." : "Save Changes"}
               </button>
             )}
           </form>
         </div>
 
-        {/* Password */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Change Password</h2>
+        <div className="space-y-6">
+          <div className="bg-white/95 rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Change Password</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Choose a strong password you do not use elsewhere.
+            </p>
 
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            {["currentPassword", "newPassword", "confirmPassword"].map((field) => (
-              <input
-                key={field}
-                type="password"
-                name={field}
-                value={passwordData[field]}
-                onChange={handlePasswordChange}
-                className="w-full p-3 border rounded-xl"
-                placeholder={field}
-              />
-            ))}
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              {["currentPassword", "newPassword", "confirmPassword"].map(
+                (field) => (
+                  <label key={field} className="block">
+                    <span className="text-xs uppercase tracking-widest text-gray-500">
+                      {field === "currentPassword"
+                        ? "Current Password"
+                        : field === "newPassword"
+                        ? "New Password"
+                        : "Confirm Password"}
+                    </span>
+                    <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3">
+                      <Lock className="w-4 h-4 text-amber-500" />
+                      <input
+                        type="password"
+                        name={field}
+                        value={passwordData[field]}
+                        onChange={handlePasswordChange}
+                        className="w-full bg-transparent text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                        placeholder="........"
+                      />
+                    </div>
+                  </label>
+                )
+              )}
 
-            <button className="px-6 py-3 bg-emerald-500 text-white rounded-xl">
-              Update Password
-            </button>
-          </form>
+              <button
+                disabled={loading}
+                className="w-full px-6 py-3 bg-gradient-to-r from-emerald-400 to-teal-500 text-white rounded-xl font-semibold hover:from-emerald-500 hover:to-teal-600 disabled:opacity-60"
+              >
+                {loading ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          </div>
+
         </div>
-
-
       </div>
     </div>
   );

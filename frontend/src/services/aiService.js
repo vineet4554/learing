@@ -1,4 +1,4 @@
-import axiosInstance from "../utils/axiosinstance.js";
+import axiosInstance from "../utils/axiosInstance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 const generateFlashcards = async (documentId, options) => {
@@ -47,7 +47,7 @@ const chat = async (documentId, message) => {
   try {
     const response = await axiosInstance.post(API_PATHS.AI.CHAT, {
       documentId,
-      question: message,
+      message,
     });
     return response.data;
   } catch (error) {

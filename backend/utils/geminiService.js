@@ -124,8 +124,9 @@ export const chatWithContext = async (question, chunks = []) => {
   const context = chunks.map(c => c.content).join("\n\n");
 
   const prompt = `
-Answer ONLY using the content below.
-If not found, say "Not mentioned in the document".
+Answer using the content below.
+If the exact phrase is missing, provide the closest relevant answer from the content.
+If the topic is truly absent, say "I couldn't find an exact answer in the available content".
 
 CONTENT:
 ${context}
@@ -144,7 +145,33 @@ ANSWER:
 export const explainConcept = async (concept, context = "") => {
   const prompt = context
     ? `
-Explain the concept using the context.
+You are a helpful teacher. Using ONLY the context below, explain the concept in clear Markdown.
+
+Formatting requirements:
+- Use section headings with "##".
+- Use bullet points ("- ") in every section.
+- Leave a blank line between sections.
+- Keep each bullet short and readable.
+- If information is missing, write: "Not mentioned in the provided content."
+
+Use this exact structure:
+
+## Definition
+- <1-2 sentence simple definition>
+
+## Why it matters
+- <bullet point>
+- <bullet point>
+
+## Key ideas or steps
+1. <numbered step or key idea>
+2. <numbered step or key idea>
+
+## Simple example
+- <short, concrete example>
+
+## Quick recap
+- <one-line summary>
 
 CONCEPT:
 ${concept}
@@ -153,7 +180,32 @@ CONTEXT:
 ${context.substring(0, 3000)}
 `
     : `
-Explain the concept clearly with examples.
+You are a helpful teacher. Explain the concept in clear Markdown.
+
+Formatting requirements:
+- Use section headings with "##".
+- Use bullet points ("- ") in every section.
+- Leave a blank line between sections.
+- Keep each bullet short and readable.
+
+Use this exact structure:
+
+## Definition
+- <1-2 sentence simple definition>
+
+## Why it matters
+- <bullet point>
+- <bullet point>
+
+## Key ideas or steps
+1. <numbered step or key idea>
+2. <numbered step or key idea>
+
+## Simple example
+- <short, concrete example>
+
+## Quick recap
+- <one-line summary>
 
 CONCEPT:
 ${concept}
@@ -162,3 +214,4 @@ ${concept}
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
 };
+

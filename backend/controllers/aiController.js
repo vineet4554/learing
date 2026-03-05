@@ -3,7 +3,7 @@ import Flashcard from "../models/Flashcard.js";
 import ChatHistory from "../models/ChatHistory.js";
 
 import * as geminiService from "../utils/geminiService.js";
-import { findRelevantChunks } from "../utils/textChunker.js";
+import { findRelevantChunks, textChunker } from "../utils/textChunker.js";
 import Quiz from "../models/Quiz.js"
 import mongoose from "mongoose";
 
@@ -65,8 +65,6 @@ export const generateFlashcards = async (req, res, next) => {
     next(error);
   }
 };
-
-// ================= GENERATE QUIZ =================
 // ================= GENERATE QUIZ =================
 export const generateQuiz = async (req, res, next) => {
   try {
@@ -171,60 +169,114 @@ export const generateSummary = async (req, res, next) => {
 // ================= CHAT WITH AI =================
 export const chat = async (req, res, next) => {
   try {
-    const { documentId, message } = req.body;
+    // Support both `message` and legacy `question` field from frontend
+    const { documentId, message, question } = req.body;
+    const userMessage = message || question;
 
-    if (!documentId || !message) {
+    if (!documentId || !userMessage) {
       return res.status(400).json({
         success: false,
-        message: "documentId and message are required"
+        message: "documentId and message are required",
       });
     }
 
     const document = await Document.findOne({
       _id: documentId,
       userId: req.user._id,
-      status: "ready"
+      status: "ready",
     });
 
     if (!document) {
       return res.status(404).json({
         success: false,
-        message: "Document not found"
+        message: "Document not found",
       });
     }
 
-    let chunks = findRelevantChunks(document.chunks, message, 3);
+    // Prefer persisted chunks; build transient chunks from extracted text if missing.
+    const persistedChunks = Array.isArray(document.chunks)
+      ? document.chunks
+      : [];
+    const rawText = document.extractedText || document.content || "";
+    const generatedChunks =
+      persistedChunks.length === 0 && rawText
+        ? textChunker(rawText, 350, 80)
+        : [];
+    const sourceChunks =
+      persistedChunks.length > 0 ? persistedChunks : generatedChunks;
 
-    // 🔑 absolute safety
-    if (!chunks || chunks.length === 0) {
-      chunks = document.chunks.slice(0, 1);
+    if (sourceChunks.length === 0) {
+      return res.status(422).json({
+        success: false,
+        message:
+          "No readable text found in this file. Please upload a text-based PDF or DOCX.",
+      });
     }
 
-    const reply = await geminiService.chatWithContext(message, chunks);
+    let chunks = findRelevantChunks(sourceChunks, userMessage, 3);
+
+    // 🔑 safety fallback
+    if (!chunks || chunks.length === 0) {
+      chunks = sourceChunks.slice(0, 1);
+    }
+
+    let reply;
+    try {
+      reply = await geminiService.chatWithContext(userMessage, chunks);
+    } catch (geminiError) {
+      console.error("Gemini chat error:", geminiError);
+      return res.status(500).json({
+        success: false,
+        message: "AI chat service failed. Please try again later.",
+      });
+    }
+
+    const isFallbackReply = (text = "") =>
+      /i couldn't find this in the provided content|not mentioned in the provided content/i.test(
+        String(text).toLowerCase()
+      );
+
+    if (isFallbackReply(reply) && sourceChunks.length > chunks.length) {
+      const broaderChunks = sourceChunks.slice(0, Math.min(sourceChunks.length, 10));
+      try {
+        const retryReply = await geminiService.chatWithContext(userMessage, broaderChunks);
+        if (retryReply && retryReply.trim()) {
+          reply = retryReply.trim();
+          chunks = broaderChunks;
+        }
+      } catch (retryError) {
+        console.error("Gemini retry chat error:", retryError);
+      }
+    }
+
+    if (isFallbackReply(reply)) {
+      reply =
+        "I could not find an exact match for that question in this file. Try asking with exact keywords from the content, or ask me to summarize the relevant section first.";
+    }
 
     let chatHistory = await ChatHistory.findOne({
       userId: req.user._id,
-      documentId: document._id
+      documentId: document._id,
     });
 
     if (!chatHistory) {
       chatHistory = await ChatHistory.create({
         userId: req.user._id,
         documentId: document._id,
-        messages: []
+        messages: [],
       });
     }
 
     chatHistory.messages.push(
       {
         role: "user",
-        content: message,
-        relativeChunks: []
+        content: userMessage,
+        relativeChunks: [],
       },
       {
         role: "assistant",
         content: reply,
-        relativeChunks: chunks.map(c => c.chunkIndex)
+        relativeChunks: chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number"),
       }
     );
 
@@ -234,11 +286,11 @@ export const chat = async (req, res, next) => {
       success: true,
       message: "Response generated successfully",
       data: {
-        question: message,
+        question: userMessage,
         answer: reply,
-        relativeChunks: chunks.map(c => c.chunkIndex),
-        chatHistoryId: chatHistory._id
-      }
+        relativeChunks: chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number"),
+        chatHistoryId: chatHistory._id,
+      },
     });
   } catch (error) {
     next(error);
@@ -273,19 +325,55 @@ export const explainConcept = async (req, res, next) => {
       });
     }
 
-    let chunks = findRelevantChunks(document.chunks, concept, 3);
+    // Prefer persisted chunks; build transient chunks from extracted text if missing.
+    const persistedChunks = Array.isArray(document.chunks)
+      ? document.chunks
+      : [];
+    const rawText = document.extractedText || document.content || "";
+    const generatedChunks =
+      persistedChunks.length === 0 && rawText
+        ? textChunker(rawText, 350, 80)
+        : [];
+    const sourceChunks =
+      persistedChunks.length > 0 ? persistedChunks : generatedChunks;
 
-    // 🔑 SAFETY FALLBACK
-    if (!chunks || chunks.length === 0) {
-      chunks = document.chunks.slice(0, 1);
+    if (sourceChunks.length === 0) {
+      return res.status(422).json({
+        success: false,
+        message:
+          "No readable text found in this file. Please upload a text-based PDF or DOCX.",
+      });
     }
 
-    const contextText = chunks.map(c => c.content).join("\n\n");
+    const chunks = findRelevantChunks(sourceChunks, concept, 3, false);
 
-    const explanation = await geminiService.explainConcept(
-      concept,
-      contextText
-    );
+    if (!chunks || chunks.length === 0) {
+      return res.json({
+        success: true,
+        message: "Concept not found in this file",
+        data: {
+          concept,
+          explanation:
+            "I could not find this concept in the current file. Try using exact words from the file text.",
+          relativeChunks: [],
+        },
+      });
+    }
+
+    const contextText = chunks.map((c) => c.content).join("\n\n");
+
+    let explanation;
+    try {
+      explanation = await geminiService.explainConcept(
+        concept,
+        contextText
+      );
+    } catch (geminiError) {
+      // Don't crash the API if the AI service fails – return a graceful fallback
+      console.error("Explain concept AI error:", geminiError);
+      explanation =
+        "The AI explanation service is currently unavailable. Please try again later.";
+    }
 
     res.json({
       success: true,
@@ -293,7 +381,7 @@ export const explainConcept = async (req, res, next) => {
       data: {
         concept,
         explanation,
-        relativeChunks: chunks.map(c => c.chunkIndex),
+        relativeChunks: chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number"),
       },
     });
   } catch (error) {
@@ -307,28 +395,35 @@ export const explainConcept = async (req, res, next) => {
 export const getChatHistory = async (req, res, next) => {
   try {
     const { documentId } = req.params;
+
     if (!documentId) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        message: "Document not found",
+        message: "documentId is required",
       });
     }
-    const chats = await ChatHistory.find({
+
+    const chat = await ChatHistory.findOne({
       documentId,
       userId: req.user._id,
-    }).sort({ createdAt: 1 });
-    if (!chats) {
-      return res.status(404).json({
-        success: false,
-        message: "Document not found",
+    });
+
+    if (!chat) {
+      // No history yet is not an error – return empty list
+      return res.json({
+        success: true,
+        data: [],
+        message: "No chat history found",
       });
     }
+
     res.json({
       success: true,
-      data: chats.message,
-      message:"chat history retrieved sucessfully"
+      data: chat.messages,
+      message: "Chat history retrieved successfully",
     });
   } catch (error) {
     next(error);
   }
 };
+

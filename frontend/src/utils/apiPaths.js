@@ -33,8 +33,8 @@ export const API_PATHS = {
       `/api/flashcards/${documentId}`,
     REVIEW_FLASHCARD: (cardId) =>
       `/api/flashcards/${cardId}/review`,
-    TOGGLE_STAR: (cardId) =>
-      `/api/flashcards/${cardId}/star`,
+    TOGGLE_STAR: (flashcardSetId) =>
+      `/api/flashcards/${flashcardSetId}/toggle-star`,
     DELETE_FLASHCARD_SET: (id) =>
       `/api/flashcards/${id}`,
   },

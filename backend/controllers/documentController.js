@@ -19,20 +19,17 @@ export const uploadDocument = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Title is required" });
     }
 
-    const baseUrl =
-      process.env.BASE_URL ||
-      `http://localhost:${process.env.PORT || 5000}`;
-
-    const fileUrl = `${baseUrl}/uploads/documents/${req.file.filename}`;
+    // ✅ FIX: Store only the path, not the full URL
+    const filePath = `/uploads/documents/${req.file.filename}`;
 
     const document = await Document.create({
       userId: req.user._id,
       title,
       fileName: req.file.originalname,
-      filePath: fileUrl,
+      filePath: filePath, // Now stores: /uploads/documents/file.pdf
       fileSize: req.file.size,
       status: "processing",
-      content: "" // Will be updated after PDF processing
+      content: ""
     });
 
     processPDF(document._id, req.file.path).catch(console.error);
@@ -61,7 +58,6 @@ const processPDF = async (documentId, filePath) => {
       chunks
     });
 
-    await fs.unlink(filePath).catch(() => {});
     console.log(`✅ PDF processed successfully for document ${documentId}`);
   } catch (error) {
     console.error(`❌ Error processing PDF for document ${documentId}:`, error);

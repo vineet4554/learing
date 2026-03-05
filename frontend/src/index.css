@@ -3,11 +3,58 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --app-bg: #f2f7f6;
+    --app-bg-soft: #f8fbfb;
+    --app-surface: #ffffff;
+    --app-text: #0f172a;
+    --app-text-muted: #64748b;
+    --app-border: #e2e8f0;
+    --app-brand-1: #34d399;
+    --app-brand-2: #14b8a6;
+    --app-box-radius: 0.9rem;
+  }
+
   html {
     font-family: "Urbanist", sans-serif;
+    color: var(--app-text);
+    scroll-behavior: smooth;
   }
 
   body {
-    background-color: #fcfbfc;
+    margin: 0;
+    background:
+      radial-gradient(circle at 20% 5%, rgba(52, 211, 153, 0.16), transparent 35%),
+      radial-gradient(circle at 80% 0%, rgba(20, 184, 166, 0.14), transparent 38%),
+      linear-gradient(180deg, var(--app-bg-soft) 0%, var(--app-bg) 100%);
+    min-height: 100dvh;
+  }
+
+  * {
+    border-color: var(--app-border);
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    border-radius: var(--app-box-radius);
+  }
+
+  div[class*="border"],
+  div[class*="shadow"],
+  div[class*="bg-white"],
+  section[class*="border"],
+  section[class*="shadow"],
+  section[class*="bg-white"],
+  article[class*="border"],
+  article[class*="shadow"],
+  article[class*="bg-white"] {
+    border-radius: var(--app-box-radius);
+  }
+
+  *::selection {
+    background-color: rgba(20, 184, 166, 0.2);
+    color: #0f172a;
   }
 }

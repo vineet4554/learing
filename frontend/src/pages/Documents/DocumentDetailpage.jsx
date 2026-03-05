@@ -1,28 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axiosinstance";
-import { API_PATHS } from "../../utils/apiPaths";
-import { Plus } from "lucide-react";
-import QuizzesList from "../Quizzes/QuizTakepage"; // adjust path if needed
-import {
-  FileText,
-  Download,
-  Trash2,
-  ArrowLeft,
-  BookOpen,
-  FileQuestion,
-  MessageSquare,
-  Sparkles,
-  Loader2,
-  AlertCircle,
-  ExternalLink,
-  Send,
-  ThumbsUp,
-  ThumbsDown,
-  MessageCircle,
-  Share2,
-} from "lucide-react";
+import axiosInstance from "../../utils/axiosInstance.js";
+import { API_PATHS, BASE_URL } from "../../utils/apiPaths.js";
+import documentService from "../../services/documentservice.js";
+import aiService from "../../services/aiService.js";
 import toast from "react-hot-toast";
+import DocumentDetailHeader from "../../components/document/DocumentDetailHeader.jsx";
+import DocumentTabs from "../../components/document/DocumentTabs.jsx";
+import DocumentContentTab from "../../components/document/DocumentContentTab.jsx";
+import DocumentChatTab from "../../components/document/DocumentChatTab.jsx";
+import DocumentAiActionsTab from "../../components/document/DocumentAiActionsTab.jsx";
+import DocumentFlashcardsTab from "../../components/document/DocumentFlashcardsTab.jsx";
+import DocumentQuizzesTab from "../../components/document/DocumentQuizzesTab.jsx";
+import QuizModal from "../../components/document/QuizModal.jsx";
+import ExplainConceptModal from "../../components/document/ExplainConceptModal.jsx";
+import SummaryModal from "../../components/document/SummaryModal.jsx";
+import DocumentLoadingState from "../../components/document/DocumentLoadingState.jsx";
+import DocumentNotFound from "../../components/document/DocumentNotFound.jsx";
+import ConfirmModal from "../../components/common/ConfirmModal.jsx";
 
 function DocumentDetailpage() {
   const { id } = useParams();
@@ -39,10 +34,54 @@ function DocumentDetailpage() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatHistoryLoading, setChatHistoryLoading] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [quizCount, setQuizCount] = useState(null);
+  const [quizRefreshKey, setQuizRefreshKey] = useState(0);
+  const [flashcardCount, setFlashcardCount] = useState(null);
+  const [flashcardRefreshKey, setFlashcardRefreshKey] = useState(0);
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [showExplainModal, setShowExplainModal] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [conceptInput, setConceptInput] = useState("");
+  const [conceptLoading, setConceptLoading] = useState(false);
+  const [conceptMessages, setConceptMessages] = useState([]);
+  const [quizTitle, setQuizTitle] = useState("");
+  const [quizQuestionCount, setQuizQuestionCount] = useState(5);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingDocument, setDeletingDocument] = useState(false);
 
   useEffect(() => {
+    setQuizCount(null);
+    setQuizRefreshKey(0);
+    setFlashcardCount(null);
+    setFlashcardRefreshKey(0);
     fetchDocument();
+    fetchChatHistory();
   }, [id]);
+
+  const fetchChatHistory = async () => {
+    try {
+      setChatHistoryLoading(true);
+      const response = await aiService.getChatHistory(id);
+      if (response?.success) {
+        const messages = (response.data || []).map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+        }));
+        setChatMessages(messages);
+      }
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+      toast.error(error.message || "Failed to load chat history");
+    } finally {
+      setChatHistoryLoading(false);
+    }
+  };
 
   const fetchDocument = async () => {
     try {
@@ -52,6 +91,7 @@ function DocumentDetailpage() {
       
       if (response.data.success) {
         setDocument(response.data.data);
+        setEditedTitle(response.data.data.title || "");
       }
     } catch (error) {
       console.error("Error fetching document:", error);
@@ -59,6 +99,37 @@ function DocumentDetailpage() {
       navigate("/documents");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTitleSave = async () => {
+    if (!editedTitle.trim() || !document) return;
+
+    try {
+      setSavingTitle(true);
+      const res = await documentService.updateDocument(document._id, {
+        title: editedTitle.trim(),
+      });
+
+      if (res?.success === false) {
+        throw new Error(res?.message || "Failed to update title");
+      }
+
+      toast.success("Title updated successfully");
+      const updatedDoc =
+        res?.data && typeof res.data === "object" ? res.data : document;
+
+      setDocument((prev) => ({
+        ...prev,
+        ...(updatedDoc || {}),
+        title: editedTitle.trim(),
+      }));
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error("Update title error:", error);
+      toast.error(error?.message || "Failed to update title");
+    } finally {
+      setSavingTitle(false);
     }
   };
 
@@ -74,7 +145,9 @@ function DocumentDetailpage() {
       if (response.data.success) {
         toast.success("Flashcards generated successfully!");
         setActiveTab("flashcards");
-        fetchDocument(); // Refresh to get updated counts
+        setFlashcardCount(null);
+        setFlashcardRefreshKey((prev) => prev + 1);
+        fetchDocument();
       }
     } catch (error) {
       console.error("Error generating flashcards:", error);
@@ -84,19 +157,22 @@ function DocumentDetailpage() {
     }
   };
 
-  const handleGenerateQuiz = async () => {
+  const handleGenerateQuiz = async ({ title, numberOfQuestions } = {}) => {
     setGenerating({ ...generating, quiz: true });
     
     try {
       const response = await axiosInstance.post(
         API_PATHS.AI.GENERATE_QUIZ,
-        { documentId: id }
+        { documentId: id, title, numberOfQuestions }
       );
       
       if (response.data.success) {
         toast.success("Quiz generated successfully!");
         setActiveTab("quizzes");
-        fetchDocument(); // Refresh to get updated counts
+        setQuizCount(null);
+        setQuizRefreshKey((prev) => prev + 1);
+        setShowQuizModal(false);
+        fetchDocument();
       }
     } catch (error) {
       console.error("Error generating quiz:", error);
@@ -104,6 +180,32 @@ function DocumentDetailpage() {
     } finally {
       setGenerating({ ...generating, quiz: false });
     }
+  };
+
+  const openQuizModal = () => {
+    setQuizTitle(document?.title ? `Quiz: ${document.title}` : "");
+    setQuizQuestionCount(5);
+    setShowQuizModal(true);
+  };
+
+  const openExplainConceptModal = () => {
+    setShowExplainModal(true);
+  };
+
+  const handleQuizModalSubmit = () => {
+    const trimmedTitle = quizTitle.trim();
+    const count = Number(quizQuestionCount);
+
+    if (!trimmedTitle) {
+      toast.error("Please enter a quiz title.");
+      return;
+    }
+    if (!Number.isInteger(count) || count < 3 || count > 25) {
+      toast.error("Number of questions must be between 3 and 25.");
+      return;
+    }
+
+    handleGenerateQuiz({ title: trimmedTitle, numberOfQuestions: count });
   };
 
   const handleGenerateSummary = async () => {
@@ -117,7 +219,10 @@ function DocumentDetailpage() {
       
       if (response.data.success) {
         toast.success("Summary generated!");
-        setDocument({ ...document, summary: response.data.data.summary });
+        setSummary(response.data.data);
+        setShowSummaryModal(true);
+      } else {
+        toast.error(response.data.message || "Failed to generate summary");
       }
     } catch (error) {
       console.error("Error generating summary:", error);
@@ -137,55 +242,98 @@ function DocumentDetailpage() {
       timestamp: new Date(),
     };
 
-    setChatMessages([...chatMessages, userMessage]);
+    setChatMessages((prev) => [...prev, userMessage]);
     setChatInput("");
     setChatLoading(true);
 
     try {
-      const response = await axiosInstance.post(API_PATHS.AI.CHAT, {
-        documentId: id,
-        message: chatInput,
-      });
+      const response = await aiService.chat(id, userMessage.content);
 
-      if (response.data.success) {
-        const aiMessage = {
-          role: "assistant",
-          content: response.data.data.response,
-          timestamp: new Date(),
-        };
-        setChatMessages([...chatMessages, userMessage, aiMessage]);
+      if (!response?.success) {
+        const backendMsg = response?.message || "Chat request failed on the server";
+        toast.error(backendMsg);
+        return;
       }
+
+      const aiMessage = {
+        role: "assistant",
+        content:
+          response?.data?.answer ||
+          "No response returned",
+        timestamp: new Date(),
+      };
+      setChatMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("Chat error:", error);
-      toast.error("Failed to get response");
+      const backendMsg =
+        error.response?.data?.message || "Failed to get response";
+      toast.error(backendMsg);
     } finally {
       setChatLoading(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this document?")) {
-      return;
-    }
+  const handleExplainConceptSubmit = async (e) => {
+    e.preventDefault();
+    if (!conceptInput.trim()) return;
+
+    const userMessage = {
+      role: "user",
+      content: conceptInput.trim(),
+      timestamp: new Date(),
+    };
+
+    setConceptMessages((prev) => [...prev, userMessage]);
+    setConceptInput("");
+    setConceptLoading(true);
 
     try {
+      const data = await aiService.explainConcept(id, userMessage.content);
+      const explanation =
+        data?.explanation || "No explanation returned";
+
+      setConceptMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: explanation,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Explain concept error:", error);
+      const backendMsg =
+        error?.response?.data?.message || error?.message || "Failed to explain concept";
+      toast.error(backendMsg);
+    } finally {
+      setConceptLoading(false);
+    }
+  };
+
+  const getDocumentUrl = (filePath) => {
+    if (!filePath) return "";
+    if (filePath.startsWith("http")) return filePath;
+    const normalizedPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
+    return `${BASE_URL}${normalizedPath}`;
+  };
+
+  const handleDeleteRequest = () => {
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      setDeletingDocument(true);
       await axiosInstance.delete(API_PATHS.DOCUMENTS.DELETE_DOCUMENT(id));
       toast.success("Document deleted successfully");
       navigate("/documents");
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete document");
+    } finally {
+      setDeletingDocument(false);
+      setDeleteModalOpen(false);
     }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const tabs = [
@@ -197,415 +345,134 @@ function DocumentDetailpage() {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading document...</p>
-        </div>
-      </div>
-    );
+    return <DocumentLoadingState />;
   }
 
   if (!document) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Document not found</h2>
-          <button
-            onClick={() => navigate("/documents")}
-            className="text-emerald-500 font-semibold hover:text-emerald-600"
-          >
-            Go back to documents
-          </button>
-        </div>
-      </div>
-    );
+    return <DocumentNotFound onBack={() => navigate("/documents")} />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          <button
-            onClick={() => navigate("/documents")}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Documents</span>
-          </button>
+      <DocumentDetailHeader
+        title={document.title}
+        onBack={() => navigate("/documents")}
+        onDelete={handleDeleteRequest}
+        isEditingTitle={isEditingTitle}
+        editedTitle={editedTitle}
+        onTitleChange={(e) => setEditedTitle(e.target.value)}
+        onStartEdit={() => setIsEditingTitle(true)}
+        onCancelEdit={() => {
+          setIsEditingTitle(false);
+          setEditedTitle(document.title || "");
+        }}
+        onSaveTitle={handleTitleSave}
+        savingTitle={savingTitle}
+      />
 
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {document.title}
-            </h1>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="font-medium">Delete</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 font-medium transition-colors relative ${
-                  activeTab === tab.id
-                    ? "text-emerald-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {tab.label}
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <DocumentTabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
 
       {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Content Tab */}
         {activeTab === "content" && (
-          <div className="space-y-6">
-            {/* Document Viewer */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">Document Viewer</h2>
-                {document.fileUrl && (
-  <a
-    href={document.fileUrl}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium"
-  >
-    <ExternalLink className="w-4 h-4" />
-    Open in new tab
-  </a>
-)}
-
-              </div>
-              
-              {document.fileUrl ? (
-                <div className="w-full h-[600px]">
-                  <iframe
-                    src={document.fileUrl}
-                    className="w-full h-full border-0"
-                    title="Document Viewer"
-                  />
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600">Document preview not available</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <DocumentContentTab
+            document={document}
+            summary={summary}
+            getDocumentUrl={getDocumentUrl}
+          />
         )}
 
         {/* Chat Tab */}
         {activeTab === "chat" && (
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-[600px] flex flex-col">
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {chatMessages.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">Start a conversation about this document</p>
-                  <p className="text-sm text-gray-500">Ask questions, request explanations, or get insights</p>
-                </div>
-              ) : (
-                chatMessages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-3xl rounded-2xl px-6 py-4 ${
-                        msg.role === "user"
-                          ? "bg-emerald-500 text-white"
-                          : "bg-gray-100 text-gray-900"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      {msg.role === "assistant" && (
-                        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-200">
-                          <button className="p-1 hover:bg-gray-200 rounded">
-                            <ThumbsUp className="w-4 h-4 text-gray-600" />
-                          </button>
-                          <button className="p-1 hover:bg-gray-200 rounded">
-                            <ThumbsDown className="w-4 h-4 text-gray-600" />
-                          </button>
-                          <button className="p-1 hover:bg-gray-200 rounded">
-                            <MessageCircle className="w-4 h-4 text-gray-600" />
-                          </button>
-                          <button className="p-1 hover:bg-gray-200 rounded">
-                            <Share2 className="w-4 h-4 text-gray-600" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-              {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-2xl px-6 py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Chat Input */}
-            <form onSubmit={handleChatSubmit} className="border-t border-gray-200 p-4">
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ask a question about this document..."
-                  className="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
-                  disabled={chatLoading}
-                />
-                <button
-                  type="submit"
-                  disabled={chatLoading || !chatInput.trim()}
-                  className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
-            </form>
-          </div>
+          <DocumentChatTab
+            chatMessages={chatMessages}
+            chatLoading={chatLoading || chatHistoryLoading}
+            chatInput={chatInput}
+            onChatInputChange={(e) => setChatInput(e.target.value)}
+            onChatSubmit={handleChatSubmit}
+          />
         )}
 
         {/* AI Actions Tab */}
         {activeTab === "ai-actions" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Generate Flashcards */}
-            <button
-              onClick={handleGenerateFlashcards}
-              disabled={generating.flashcards}
-              className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-all text-left disabled:opacity-50"
-            >
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-                {generating.flashcards ? (
-                  <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
-                ) : (
-                  <BookOpen className="w-6 h-6 text-purple-600" />
-                )}
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Flashcards</h3>
-              <p className="text-gray-600 mb-4">
-                Create interactive flashcards from this document for effective studying
-              </p>
-              <div className="text-purple-600 font-semibold">
-                {generating.flashcards ? "Generating..." : "Generate Now →"}
-              </div>
-            </button>
-
-            {/* Generate Quiz */}
-            {/* Quizzes Tab */}
-{activeTab === "quizzes" && (
-  <div>
-    {/* Header with Generate Button */}
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Quizzes</h2>
-        <p className="text-gray-600 mt-1">
-          {document.quizCount > 0
-            ? `${document.quizCount} quiz${document.quizCount > 1 ? 'zes' : ''} available`
-            : "No quizzes generated yet"}
-        </p>
-      </div>
-      <button
-        onClick={handleGenerateQuiz}
-        disabled={generating.quiz}
-        className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-50 shadow-lg hover:shadow-xl"
-      >
-        {generating.quiz ? (
-          <>
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Generating...
-          </>
-        ) : (
-          <>
-            <Plus className="w-5 h-5" />
-            Generate Quiz
-          </>
-        )}
-      </button>
-    </div>
-
-    {/* Quizzes Grid */}
-    {document.quizCount > 0 ? (
-      <QuizzesList documentId={id} />
-    ) : (
-      <div className="bg-white rounded-2xl p-12 shadow-sm text-center">
-        <FileQuestion className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-900 mb-2">No quizzes yet</h3>
-        <p className="text-gray-600 mb-6">
-          Generate a quiz to test your knowledge on this document
-        </p>
-        <button
-          onClick={handleGenerateQuiz}
-          disabled={generating.quiz}
-          className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-50"
-        >
-          {generating.quiz ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Generate Your First Quiz
-            </>
-          )}
-        </button>
-      </div>
-    )}
-  </div>
-)}
-
-            {/* Generate Summary */}
-            <button
-              onClick={handleGenerateSummary}
-              disabled={generating.summary}
-              className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-all text-left disabled:opacity-50"
-            >
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                {generating.summary ? (
-                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                ) : (
-                  <FileText className="w-6 h-6 text-blue-600" />
-                )}
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Summary</h3>
-              <p className="text-gray-600 mb-4">
-                Get a concise summary highlighting the key points of the document
-              </p>
-              <div className="text-blue-600 font-semibold">
-                {generating.summary ? "Generating..." : "Generate Now →"}
-              </div>
-            </button>
-
-            {/* AI Chat */}
-            <button
-              onClick={() => setActiveTab("chat")}
-              className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-all text-left"
-            >
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
-                <MessageSquare className="w-6 h-6 text-orange-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Chat with Document</h3>
-              <p className="text-gray-600 mb-4">
-                Ask questions and get instant answers about the document content
-              </p>
-              <div className="text-orange-600 font-semibold">Start Chatting →</div>
-            </button>
-          </div>
+          <DocumentAiActionsTab
+            generating={generating}
+            onGenerateFlashcards={handleGenerateFlashcards}
+            onOpenQuizModal={openQuizModal}
+            onGenerateSummary={handleGenerateSummary}
+            onOpenExplainConcept={openExplainConceptModal}
+          />
         )}
 
         {/* Flashcards Tab */}
         {activeTab === "flashcards" && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
-            <BookOpen className="w-16 h-16 text-purple-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Flashcards</h3>
-            <p className="text-gray-600 mb-6">
-              {document.flashcardCount > 0
-                ? `${document.flashcardCount} flashcard${document.flashcardCount > 1 ? 's' : ''} available`
-                : "No flashcards generated yet"}
-            </p>
-            {document.flashcardCount > 0 ? (
-              <button
-                onClick={() => navigate(`/documents/${id}/flashcards`)}
-                className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
-              >
-                <BookOpen className="w-5 h-5" />
-                Study Flashcards
-              </button>
-            ) : (
-              <button
-                onClick={handleGenerateFlashcards}
-                disabled={generating.flashcards}
-                className="inline-flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {generating.flashcards ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Generate Flashcards
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          <DocumentFlashcardsTab
+            documentId={id}
+            document={document}
+            flashcardCount={flashcardCount}
+            onCountChange={setFlashcardCount}
+            generating={generating}
+            onGenerateFlashcards={handleGenerateFlashcards}
+            refreshKey={flashcardRefreshKey}
+          />
         )}
 
         {/* Quizzes Tab */}
         {activeTab === "quizzes" && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
-            <FileQuestion className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Quizzes</h3>
-            <p className="text-gray-600 mb-6">
-              {document.quizCount > 0
-                ? `${document.quizCount} quiz${document.quizCount > 1 ? 'zes' : ''} available`
-                : "No quizzes generated yet"}
-            </p>
-            {document.quizCount > 0 ? (
-              <button
-                onClick={() => toast.info("Quiz list coming soon!")}
-                className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
-              >
-                <FileQuestion className="w-5 h-5" />
-                View Quizzes
-              </button>
-            ) : (
-              <button
-                onClick={handleGenerateQuiz}
-                disabled={generating.quiz}
-                className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-3 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {generating.quiz ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Generate Quiz
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+          <DocumentQuizzesTab
+            documentId={id}
+            document={document}
+            quizCount={quizCount}
+            onCountChange={setQuizCount}
+            generating={generating}
+            onOpenQuizModal={openQuizModal}
+            refreshKey={quizRefreshKey}
+          />
         )}
       </div>
+
+      <QuizModal
+        isOpen={showQuizModal}
+        onClose={() => setShowQuizModal(false)}
+        quizTitle={quizTitle}
+        onTitleChange={(e) => setQuizTitle(e.target.value)}
+        quizQuestionCount={quizQuestionCount}
+        onQuestionCountChange={(e) => setQuizQuestionCount(e.target.value)}
+        onSubmit={handleQuizModalSubmit}
+        generating={generating}
+      />
+      <ExplainConceptModal
+        isOpen={showExplainModal}
+        onClose={() => setShowExplainModal(false)}
+        messages={conceptMessages}
+        input={conceptInput}
+        loading={conceptLoading}
+        onInputChange={(e) => setConceptInput(e.target.value)}
+        onSubmit={handleExplainConceptSubmit}
+      />
+      <SummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        summary={summary}
+        loading={generating.summary}
+      />
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        title="Delete document?"
+        description="This will permanently remove the document and its related content."
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          if (deletingDocument) return;
+          setDeleteModalOpen(false);
+        }}
+        loading={deletingDocument}
+      />
     </div>
   );
 }

@@ -100,12 +100,10 @@ export const submitQuiz = async (req, res, next) => {
       });
     }
 
-    // Check if quiz already has userAnswers
+    // Allow resubmission: overwrite previous answers/score
     if (quiz.userAnswers && quiz.userAnswers.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Quiz already submitted"
-      });
+      quiz.userAnswers = [];
+      quiz.score = 0;
     }
 
     let correctCount = 0;

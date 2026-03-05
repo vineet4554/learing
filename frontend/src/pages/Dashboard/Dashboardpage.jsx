@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Spinner from '../../components/common/Spinner.jsx';
 import progressService from '../../services/progressService.js';
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FileText,
   BookOpen,
@@ -18,10 +18,20 @@ function Dashboardpage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (location.hash !== "#recent-activity" || loading) return;
+    const section = document.getElementById("recent-activity");
+    if (!section) return;
+    setTimeout(() => {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }, [location.hash, loading]);
 
   const fetchDashboardData = async () => {
     try {
@@ -46,7 +56,6 @@ function Dashboardpage() {
   const getActivityNavigationPath = (activity) => {
     const type = activity.type?.toLowerCase() || '';
     const documentId = activity.documentId || activity.document_id;
-    const flashcardId = activity.flashcardId || activity.flashcard_id;
     const quizId = activity.quizId || activity.quiz_id;
 
     // Navigate based on activity type
@@ -65,6 +74,20 @@ function Dashboardpage() {
   const handleActivityClick = (activity) => {
     const path = getActivityNavigationPath(activity);
     navigate(path);
+  };
+
+  const formatActivityTimestamp = (timestamp) => {
+    if (!timestamp) return "No date available";
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "No date available";
+    return date.toLocaleString("en-US", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   };
 
   // Loading State
@@ -129,6 +152,7 @@ function Dashboardpage() {
       icon: FileText,
       bgGradient: 'from-blue-400 to-cyan-500',
       shadowColor: 'shadow-blue-500/20',
+      path: '/documents',
     },
     {
       label: 'TOTAL FLASHCARDS',
@@ -136,6 +160,7 @@ function Dashboardpage() {
       icon: BookOpen,
       bgGradient: 'from-purple-400 to-pink-500',
       shadowColor: 'shadow-purple-500/20',
+      path: '/flashcards',
     },
     {
       label: 'TOTAL QUIZZES',
@@ -202,28 +227,42 @@ function Dashboardpage() {
     .slice(0, 10); // Show only the 10 most recent activities
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1.5 sm:mb-2">Dashboard</h1>
         <p className="text-gray-500">Track your learning progress and activity</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <div
               key={index}
-              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+              className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 transition-shadow ${
+                stat.path ? "hover:shadow-md cursor-pointer" : ""
+              }`}
+              onClick={() => {
+                if (stat.path) navigate(stat.path);
+              }}
+              role={stat.path ? "button" : undefined}
+              tabIndex={stat.path ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (!stat.path) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate(stat.path);
+                }
+              }}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-gray-500 tracking-wide mb-3">
                     {stat.label}
                   </p>
-                  <p className="text-4xl font-bold text-gray-900">
+                  <p className="text-3xl sm:text-4xl font-bold text-gray-900">
                     {stat.value}
                   </p>
                 </div>
@@ -237,8 +276,8 @@ function Dashboardpage() {
       </div>
 
       {/* Recent Activity Section */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100">
+      <div id="recent-activity" className="bg-white/95 rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 sm:p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
               <Clock className="w-5 h-5 text-gray-600" />
@@ -254,29 +293,22 @@ function Dashboardpage() {
               return (
                 <div
                   key={activity.id || index}
-                  className="p-6 hover:bg-gray-50 transition-colors cursor-pointer group"
+                  className="p-4 sm:p-6 hover:bg-gray-50 transition-colors cursor-pointer group"
                   onClick={() => handleActivityClick(activity)}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="flex-1">
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
                           <ActivityIcon className="w-4 h-4 text-blue-600" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-gray-900 font-medium mb-1">
+                          <p className="text-gray-900 font-medium mb-1 break-words">
                             {activity.type}: {activity.title}
                           </p>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
                             <span>
-                              {activity.timestamp ? new Date(activity.timestamp).toLocaleString('en-US', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false
-                              }) : 'No date available'}
+                              {formatActivityTimestamp(activity.timestamp)}
                             </span>
                             {activity.meta && (
                               <>
@@ -289,7 +321,7 @@ function Dashboardpage() {
                       </div>
                     </div>
                     <button 
-                      className="px-4 py-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100"
+                      className="px-3 py-2 text-sm font-medium text-emerald-700 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleActivityClick(activity);

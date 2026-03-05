@@ -1,31 +1,27 @@
-import React from 'react'
-import { Navigate, Outlet } from 'react-router-dom'
-import { useAuth } from '../../context/Authcontext'
-import AppLayout from '../layout/AppLayout.jsx'
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../../context/Authcontext.jsx";
+import AppLayout from "../layout/AppLayout.jsx";
 
 const ProtectedRoute = () => {
-    const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
-                </div>
-            </div>
-        );
-    }
-    
-    if (!isAuthenticated) {
-        return <Navigate to="/register" />;
-    }
-    
+  if (loading) {
     return (
-        <AppLayout>
-            <Outlet />
-        </AppLayout>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
     );
-}
+  }
 
-export default ProtectedRoute
+  if (!isAuthenticated) {
+    return <Navigate to="/register" />;
+  }
+
+  return <AppLayout />;
+};
+
+export default ProtectedRoute;

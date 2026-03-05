@@ -10,9 +10,22 @@ import {
 function FlashcardSetCard({ set, onDelete, isDeleting }) {
   const navigate = useNavigate();
 
-  const totalCards = set.flashcards?.length || set.totalCards || 0;
-  const reviewedCards = set.reviewedCount || 0;
-  const starredCards = set.starredCount || 0;
+  const cards = set.cards || set.flashcards || [];
+
+  const totalCards =
+    typeof set.totalCards === "number" ? set.totalCards : cards.length;
+
+  // In this UI, we treat "starred" cards as "reviewed"
+  const starredCards =
+    typeof set.starredCount === "number"
+      ? set.starredCount
+      : cards.filter((card) => card.isStarred).length;
+
+  const reviewedCards =
+    typeof set.reviewedCount === "number"
+      ? set.reviewedCount
+      : starredCards;
+
   const documentId = set.documentId?._id || set.documentId;
 
   const getProgressPercentage = (reviewed, total) => {
@@ -66,7 +79,7 @@ function FlashcardSetCard({ set, onDelete, isDeleting }) {
 
   return (
     <div
-      className={`bg-white rounded-2xl border-2 transition-all p-6 cursor-pointer ${
+      className={`bg-white rounded-2xl border-2 transition-all p-4 sm:p-6 cursor-pointer ${
         progressPercentage === 100
           ? 'border-emerald-200 hover:border-emerald-300 hover:shadow-lg'
           : 'border-gray-100 hover:border-emerald-200 hover:shadow-lg'
@@ -74,9 +87,9 @@ function FlashcardSetCard({ set, onDelete, isDeleting }) {
       onClick={handleStudy}
     >
       {/* Icon & Delete */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-          <BookOpen className="w-6 h-6 text-emerald-600" />
+      <div className="flex items-start justify-between mb-4 gap-2">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+          <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
         </div>
         <button
           onClick={handleDelete}
@@ -89,22 +102,22 @@ function FlashcardSetCard({ set, onDelete, isDeleting }) {
       </div>
 
       {/* Title */}
-      <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2 min-h-[3.5rem]">
+      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1 line-clamp-2 min-h-[3rem] sm:min-h-[3.5rem]">
         {set.title || set.documentId?.title || 'Flashcard Set'}
       </h3>
 
       {/* Created Date */}
-      <p className="text-xs text-gray-500 mb-4">
+      <p className="text-[11px] sm:text-xs text-gray-500 mb-3 sm:mb-4">
         {formatTimeAgo(set.createdAt)}
       </p>
 
       {/* Card Count & Progress Badge */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-medium text-gray-700">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <span className="text-xs sm:text-sm font-medium text-gray-700">
           {totalCards} Cards
         </span>
         {progressPercentage > 0 && (
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${getPercentageBadgeColor(progressPercentage)}`}>
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] sm:text-xs font-semibold ${getPercentageBadgeColor(progressPercentage)}`}>
             <TrendingUp className="w-3 h-3" />
             {progressPercentage}%
           </div>
@@ -112,8 +125,8 @@ function FlashcardSetCard({ set, onDelete, isDeleting }) {
       </div>
 
       {/* Progress Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-sm mb-2">
+      <div className="mb-5 sm:mb-6">
+        <div className="flex items-center justify-between text-xs sm:text-sm mb-1.5 sm:mb-2">
           <span className="text-gray-600">Progress</span>
           <span className="text-gray-900 font-semibold">
             {reviewedCards}/{totalCards} reviewed
@@ -133,7 +146,7 @@ function FlashcardSetCard({ set, onDelete, isDeleting }) {
           e.stopPropagation();
           handleStudy();
         }}
-        className="w-full flex items-center justify-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-semibold px-4 py-3 rounded-xl transition-colors"
+        className="w-full flex items-center justify-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-semibold px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl transition-colors text-sm sm:text-base"
       >
         <Sparkles className="w-4 h-4" />
         Study Now

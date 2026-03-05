@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import documentService from "../../services/documentService";
+import documentService from "../../services/documentservice.js";
 import Spinner from "../../components/common/Spinner.jsx";
 import {
   FileText,
@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { motion } from "framer-motion";
+import ConfirmModal from "../../components/common/ConfirmModal.jsx";
 
 export default function DocumentListPage() {
   const navigate = useNavigate();
@@ -28,6 +28,9 @@ export default function DocumentListPage() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -111,16 +114,25 @@ export default function DocumentListPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this document?")) return;
+  const handleDeleteRequest = (id) => {
+    setPendingDeleteId(id);
+    setDeleteModalOpen(true);
+  };
 
+  const handleDeleteConfirm = async () => {
+    if (!pendingDeleteId) return;
     try {
-      await documentService.deleteDocument(id);
+      setDeleting(true);
+      await documentService.deleteDocument(pendingDeleteId);
       toast.success("Deleted");
       fetchDocuments();
     } catch (err) {
       console.error(err);
       toast.error(err?.message || "Delete failed");
+    } finally {
+      setDeleting(false);
+      setDeleteModalOpen(false);
+      setPendingDeleteId(null);
     }
   };
 
@@ -148,27 +160,25 @@ export default function DocumentListPage() {
   );
 
   const DocumentCard = ({ doc }) => (
-    <motion.div
-      whileHover={{ y: -6, scale: 1.02 }}
-      transition={{ type: "spring", stiffness: 200 }}
-      className="bg-white/80 backdrop-blur rounded-3xl p-6 shadow-sm hover:shadow-2xl transition relative group cursor-pointer border border-gray-100"
+    <div
+      className="bg-white/85 backdrop-blur rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-2xl transition relative group cursor-pointer border border-gray-100"
       onClick={() => navigate(`/documents/${doc._id}`)}
     >
       <button
         onClick={(e) => {
           e.stopPropagation();
-          handleDelete(doc._id);
+          handleDeleteRequest(doc._id);
         }}
         className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-xl transition"
       >
         <Trash2 className="w-4 h-4" />
       </button>
 
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 flex items-center justify-center mb-5 shadow-lg">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 flex items-center justify-center mb-4 sm:mb-5 shadow-lg">
         <FileText className="text-white w-7 h-7" />
       </div>
 
-      <h3 className="font-semibold text-gray-900 line-clamp-1 text-lg mb-1">
+      <h3 className="font-semibold text-gray-900 line-clamp-1 text-base sm:text-lg mb-1">
         {doc.title || "Untitled"}
       </h3>
 
@@ -186,7 +196,7 @@ export default function DocumentListPage() {
       <div className="flex items-center gap-1 text-gray-400 text-xs">
         <Clock className="w-4 h-4" /> {formatTime(doc.createdAt)}
       </div>
-    </motion.div>
+    </div>
   );
 
   if (loading) {
@@ -198,55 +208,53 @@ export default function DocumentListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <div className="min-h-full bg-gradient-to-br from-emerald-50 via-white to-teal-50 rounded-3xl border border-white/70 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-30 backdrop-blur bg-white/70 border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 rounded-xl hover:bg-gray-100 transition"
+              className="p-2 rounded-xl hover:bg-gray-100 transition flex-shrink-0"
             >
               <ArrowLeft />
             </button>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 truncate">
                 My Documents <Sparkles className="w-5 h-5 text-emerald-500" />
               </h1>
-              <p className="text-sm text-gray-500">Organize your smart learning files</p>
+              <p className="hidden sm:block text-sm text-gray-500">Organize your smart learning files</p>
             </div>
           </div>
 
           <button
             onClick={() => setUploadModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-teal-500 text-white px-5 py-2.5 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition"
+            className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-emerald-400 to-teal-500 text-white px-3 py-2 sm:px-5 sm:py-2.5 rounded-2xl shadow-lg hover:shadow-2xl transition text-sm sm:text-base flex-shrink-0"
           >
-            <Plus className="w-4 h-4" /> Upload
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Upload</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
       </div>
 
       {/* Search + Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="relative mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="relative mb-6 sm:mb-8">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search your documents..."
-            className="w-full pl-12 pr-4 py-3 border-2 rounded-2xl outline-none focus:border-emerald-400 shadow-sm"
+            className="w-full pl-11 sm:pl-12 pr-4 py-2.5 sm:py-3 border-2 rounded-2xl outline-none focus:border-emerald-400 shadow-sm bg-white"
           />
         </div>
 
         {filtered.length ? (
-          <motion.div
-            layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map((doc) => (
               <DocumentCard key={doc._id} doc={doc} />
             ))}
-          </motion.div>
+          </div>
         ) : (
           <div className="text-center py-24 text-gray-400">
             <FileText className="mx-auto w-16 h-16 mb-4 opacity-40" />
@@ -259,11 +267,7 @@ export default function DocumentListPage() {
       {/* Upload Modal */}
       {uploadModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <motion.div
-            initial={{ scale: 0.85, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl p-8 w-full max-w-md relative shadow-2xl"
-          >
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md relative shadow-2xl">
             <button
               onClick={() => setUploadModalOpen(false)}
               className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-xl"
@@ -297,9 +301,22 @@ export default function DocumentListPage() {
                 {uploading ? "Uploading..." : "Upload Document"}
               </button>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        title="Delete document?"
+        description="This will permanently remove the document and its related content."
+        confirmText="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => {
+          if (deleting) return;
+          setDeleteModalOpen(false);
+          setPendingDeleteId(null);
+        }}
+        loading={deleting}
+      />
     </div>
   );
 }

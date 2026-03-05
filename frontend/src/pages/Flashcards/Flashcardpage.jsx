@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import flashcardService from "../../services/flashcardService.js";
+import flashcardService from "../../services/FlashcardService.js";
 import Spinner from "../../components/common/Spinner.jsx";
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ function Flashcardpage() {
   const navigate = useNavigate();
 
   const [flashcards, setFlashcards] = useState([]);
+  const [flashcardSetId, setFlashcardSetId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -41,8 +42,12 @@ function Flashcardpage() {
       const data = await flashcardService.getFlashcardsForDocument(id);
 
       if (data.success) {
-        const cards = data.data?.[0]?.cards || [];
+        const set = data.data?.[0];
+        const cards = set?.cards || [];
+        setFlashcardSetId(set?._id || null);
         setFlashcards(cards);
+      } else {
+        toast.error(data.message || "Failed to load flashcards");
       }
     } catch (error) {
       console.error("Error fetching flashcards:", error);
@@ -54,8 +59,28 @@ function Flashcardpage() {
 
   const handleFlip = () => setIsFlipped((prev) => !prev);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentIndex < flashcards.length - 1) {
+      // Mark current card as reviewed in backend
+      if (flashcardSetId != null) {
+        try {
+          await flashcardService.reviewFlashcard(flashcardSetId, currentIndex);
+
+          // Update local state so UI immediately reflects reviewed status
+          setFlashcards((prev) => {
+            const updated = [...prev];
+            const card = { ...updated[currentIndex] };
+            card.reviewCount = (card.reviewCount || 0) + 1;
+            card.lastReviewed = new Date().toISOString();
+            updated[currentIndex] = card;
+            return updated;
+          });
+        } catch (error) {
+          console.error("Error marking card reviewed:", error);
+          // Don't block navigation on review error
+        }
+      }
+
       setCurrentIndex((prev) => prev + 1);
       setIsFlipped(false);
     }
@@ -73,6 +98,37 @@ function Flashcardpage() {
     setFlashcards(shuffled);
     setCurrentIndex(0);
     setIsFlipped(false);
+  };
+
+  const handleToggleStar = async () => {
+    const currentCard = flashcards[currentIndex];
+
+    if (!flashcardSetId) {
+      toast.error("Unable to toggle star for this card");
+      return;
+    }
+
+    // Optimistic UI update
+    const previous = [...flashcards];
+    const updated = [...flashcards];
+    updated[currentIndex] = {
+      ...currentCard,
+      isStarred: !currentCard.isStarred,
+    };
+    setFlashcards(updated);
+
+    try {
+      await flashcardService.toggleStar(flashcardSetId, currentIndex);
+      toast.success(
+        updated[currentIndex].isStarred
+          ? "Card starred"
+          : "Card unstarred"
+      );
+    } catch (error) {
+      console.error("Error toggling star:", error);
+      setFlashcards(previous);
+      toast.error(error.message || "Failed to toggle star");
+    }
   };
 
   if (loading) return <Spinner text="Loading flashcards..." />;
@@ -127,8 +183,17 @@ function Flashcardpage() {
               {currentCard?.difficulty || "Easy"}
             </span>
 
-            <button className="p-2 rounded-full hover:bg-gray-100 transition">
-              <Star className="w-5 h-5 text-gray-300" />
+            <button
+              onClick={handleToggleStar}
+              className="p-2 rounded-full hover:bg-gray-100 transition"
+            >
+              <Star
+                className={`w-5 h-5 ${
+                  currentCard?.isStarred
+                    ? "text-yellow-400 fill-yellow-400"
+                    : "text-gray-300"
+                }`}
+              />
             </button>
           </div>
 
