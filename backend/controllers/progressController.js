@@ -53,8 +53,8 @@ export const getDashboard = async (req, res, next) => {
 
     // recent activity
     const recentDocuments = await Document.find({ userId })
-      .select('title fileName uploadDate status')
-      .sort({ uploadDate: -1 })
+      .select('title fileName createdAt updatedAt status')
+      .sort({ createdAt: -1 })
       .limit(5);
 
     const recentFlashcards = await Flashcard.find({ userId })
@@ -100,7 +100,7 @@ export const getDashboard = async (req, res, next) => {
 
     todayActivity.documentsUploaded = await Document.countDocuments({
       userId,
-      uploadDate: { $gte: today },
+      createdAt: { $gte: today },
     });
 
     const sevenDaysAgo = new Date();

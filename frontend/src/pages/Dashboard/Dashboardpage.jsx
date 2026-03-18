@@ -22,7 +22,7 @@ function Dashboardpage() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [location.key]);
 
   useEffect(() => {
     if (location.hash !== "#recent-activity" || loading) return;
@@ -182,10 +182,10 @@ function Dashboardpage() {
     recentActivityData.documents.forEach(doc => {
       allActivities.push({
         id: doc._id,
-        type: 'Accessed Document',
+        type: 'Uploaded Document',
         title: doc.title,
         documentId: doc._id,
-        timestamp: doc.updatedAt || doc.createdAt,
+        timestamp: doc.uploadDate || doc.updatedAt || doc.createdAt,
         icon: FileText
       });
     });
