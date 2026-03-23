@@ -266,7 +266,9 @@ function DocumentDetailpage() {
     } catch (error) {
       console.error("Chat error:", error);
       const backendMsg =
-        error.response?.data?.message || "Failed to get response";
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to get response";
       toast.error(backendMsg);
     } finally {
       setChatLoading(false);

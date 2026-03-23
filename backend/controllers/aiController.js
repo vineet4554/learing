@@ -180,6 +180,13 @@ export const chat = async (req, res, next) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(documentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document ID format",
+      });
+    }
+
     const document = await Document.findOne({
       _id: documentId,
       userId: req.user._id,
@@ -213,22 +220,24 @@ export const chat = async (req, res, next) => {
       });
     }
 
-    let chunks = findRelevantChunks(sourceChunks, userMessage, 3);
+    let chunks = findRelevantChunks(sourceChunks, userMessage, 3, false);
 
-    // 🔑 safety fallback
-    if (!chunks || chunks.length === 0) {
-      chunks = sourceChunks.slice(0, 1);
+    const hadRelevantChunks = Array.isArray(chunks) && chunks.length > 0;
+    if (!hadRelevantChunks) {
+      chunks = [];
     }
 
     let reply;
     try {
-      reply = await geminiService.chatWithContext(userMessage, chunks);
+      if (hadRelevantChunks) {
+        reply = await geminiService.chatWithContext(userMessage, chunks);
+      } else {
+        reply = await geminiService.chatGeneral(userMessage);
+      }
     } catch (geminiError) {
       console.error("Gemini chat error:", geminiError);
-      return res.status(500).json({
-        success: false,
-        message: "AI chat service failed. Please try again later.",
-      });
+      reply =
+        "I can read your question, but the AI chat service is currently unavailable. Please verify your Gemini API key in backend/.env and try again.";
     }
 
     const isFallbackReply = (text = "") =>
@@ -236,7 +245,7 @@ export const chat = async (req, res, next) => {
         String(text).toLowerCase()
       );
 
-    if (isFallbackReply(reply) && sourceChunks.length > chunks.length) {
+    if (hadRelevantChunks && isFallbackReply(reply) && sourceChunks.length > chunks.length) {
       const broaderChunks = sourceChunks.slice(0, Math.min(sourceChunks.length, 10));
       try {
         const retryReply = await geminiService.chatWithContext(userMessage, broaderChunks);
@@ -250,8 +259,20 @@ export const chat = async (req, res, next) => {
     }
 
     if (isFallbackReply(reply)) {
-      reply =
-        "I could not find an exact match for that question in this file. Try asking with exact keywords from the content, or ask me to summarize the relevant section first.";
+      try {
+        const generalReply = await geminiService.chatGeneral(userMessage);
+        if (generalReply?.trim()) {
+          reply = generalReply.trim();
+          chunks = [];
+        } else {
+          reply =
+            "I could not find an exact match for that question in this file. Try asking with exact keywords from the content, or ask me to summarize the relevant section first.";
+        }
+      } catch (fallbackErr) {
+        console.error("Gemini general fallback error:", fallbackErr);
+        reply =
+          "I could not find an exact match for that question in this file. Try asking with exact keywords from the content, or ask me to summarize the relevant section first.";
+      }
     }
 
     let chatHistory = await ChatHistory.findOne({

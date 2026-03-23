@@ -1,29 +1,82 @@
 // utils/geminiService.js
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is missing in .env file");
-}
+// Load backend/.env regardless of where the process starts.
+dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
-// ---------- INIT (ONCE) ----------
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const normalizeKey = (value = "") =>
+  String(value).trim().replace(/^['\"]|['\"]$/g, "");
 
-// ✅ Stable + supported model
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash"
-});
+const getCandidateApiKeys = () => {
+  const keys = [
+    normalizeKey(process.env.GEMINI_API_KEY || ""),
+    normalizeKey(process.env.GOOGLE_API_KEY || "")
+  ].filter(Boolean);
+
+  return [...new Set(keys)];
+};
+
+const createModel = (apiKey) => {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+};
+
+const formatGeminiError = (error, fallbackMessage) => {
+  const reason = error?.errorDetails?.[0]?.reason || "";
+  if (
+    reason === "API_KEY_INVALID" ||
+    /API Key not found|API_KEY_INVALID/i.test(error?.message || "")
+  ) {
+    return "Invalid Gemini API key. Update GEMINI_API_KEY in backend/.env and restart the server.";
+  }
+  return fallbackMessage;
+};
+
+const generateWithGemini = async (prompt) => {
+  const candidateKeys = getCandidateApiKeys();
+
+  if (candidateKeys.length === 0) {
+    throw new Error(
+      "Gemini API key missing. Set GEMINI_API_KEY (or GOOGLE_API_KEY) in backend/.env"
+    );
+  }
+
+  let lastError;
+
+  for (const apiKey of candidateKeys) {
+    try {
+      const model = createModel(apiKey);
+      return await model.generateContent(prompt);
+    } catch (error) {
+      lastError = error;
+      const reason = error?.errorDetails?.[0]?.reason || "";
+      const keyInvalid =
+        reason === "API_KEY_INVALID" ||
+        /API Key not found|API_KEY_INVALID/i.test(error?.message || "");
+
+      if (!keyInvalid) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error("Failed to call Gemini API");
+};
 
 // ================= GENERATE TEXT =================
 export const generateText = async (prompt) => {
   try {
-    const result = await model.generateContent(prompt);
+    const result = await generateWithGemini(prompt);
     return result.response.text().trim();
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error(`Gemini API Failed: ${error.message}`);
+    throw new Error(formatGeminiError(error, `Gemini API Failed: ${error.message}`));
   }
 };
 
@@ -42,10 +95,10 @@ Return ONLY valid JSON (no markdown, no text):
 ]
 `;
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithGemini(prompt);
     let text = result.response.text().trim();
 
-    // clean accidental markdown
+    // Clean accidental markdown
     text = text.replace(/```json|```/gi, "").trim();
 
     const cards = JSON.parse(text);
@@ -54,13 +107,13 @@ Return ONLY valid JSON (no markdown, no text):
       throw new Error("Flashcards response is not an array");
     }
 
-    return cards.map(c => ({
+    return cards.map((c) => ({
       question: c.question || c.front,
       answer: c.answer || c.back
     }));
   } catch (error) {
     console.error("Flashcard generation error:", error);
-    throw new Error("Failed to generate flashcards");
+    throw new Error(formatGeminiError(error, "Failed to generate flashcards"));
   }
 };
 
@@ -84,7 +137,7 @@ Return ONLY valid JSON:
 ]
 `;
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithGemini(prompt);
     let text = result.response.text().trim();
     text = text.replace(/```json|```/gi, "").trim();
 
@@ -97,7 +150,7 @@ Return ONLY valid JSON:
     return quiz;
   } catch (error) {
     console.error("Quiz generation error:", error);
-    throw new Error("Failed to generate quiz");
+    throw new Error(formatGeminiError(error, "Failed to generate quiz"));
   }
 };
 
@@ -105,23 +158,23 @@ Return ONLY valid JSON:
 export const generateSummary = async (content) => {
   try {
     const prompt = `
-Summarize the content below in 200–400 words.
+Summarize the content below in 200-400 words.
 
 CONTENT:
 ${content.substring(0, 5000)}
 `;
 
-    const result = await model.generateContent(prompt);
+    const result = await generateWithGemini(prompt);
     return result.response.text().trim();
   } catch (error) {
     console.error("Summary error:", error);
-    throw new Error("Failed to generate summary");
+    throw new Error(formatGeminiError(error, "Failed to generate summary"));
   }
 };
 
 // ================= CHAT WITH CONTEXT =================
 export const chatWithContext = async (question, chunks = []) => {
-  const context = chunks.map(c => c.content).join("\n\n");
+  const context = chunks.map((c) => c.content).join("\n\n");
 
   const prompt = `
 Answer using the content below.
@@ -137,7 +190,24 @@ ${question}
 ANSWER:
 `;
 
-  const result = await model.generateContent(prompt);
+  const result = await generateWithGemini(prompt);
+  return result.response.text().trim();
+};
+
+// ================= CHAT (GENERAL FALLBACK) =================
+export const chatGeneral = async (question) => {
+  const prompt = `
+You are a helpful AI assistant.
+Answer the question clearly and briefly.
+If the question is ambiguous, make a reasonable assumption and continue.
+
+QUESTION:
+${question}
+
+ANSWER:
+`;
+
+  const result = await generateWithGemini(prompt);
   return result.response.text().trim();
 };
 
@@ -211,7 +281,6 @@ CONCEPT:
 ${concept}
 `;
 
-  const result = await model.generateContent(prompt);
+  const result = await generateWithGemini(prompt);
   return result.response.text().trim();
 };
-
