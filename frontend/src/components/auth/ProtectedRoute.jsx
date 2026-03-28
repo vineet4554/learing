@@ -8,17 +8,17 @@ const ProtectedRoute = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-dvh flex items-center justify-center px-4">
+        <div className="rounded-2xl border border-white/80 bg-white/80 px-8 py-6 text-center shadow-sm backdrop-blur">
+          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent"></div>
+          <p className="text-sm font-medium text-slate-700">Checking your session...</p>
         </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/register" />;
+    return <Navigate to="/home" replace />;
   }
 
   return <AppLayout />;

@@ -10,6 +10,7 @@ import { useAuth } from "./context/Authcontext.jsx";
 
 import Registerpage from "./pages/Auth/Registerpage.jsx";
 import Loginpage from "./pages/Auth/Loginpage.jsx";
+import Homepage from "./pages/Homepage.jsx";
 import Dashboardpage from "./pages/Dashboard/Dashboardpage.jsx";
 import Documentlistpage from "./pages/Documents/Documentlistpage.jsx";
 import DocumentDetailpage from "./pages/Documents/DocumentDetailpage.jsx";
@@ -24,10 +25,17 @@ import Profilepage from "./pages/Profile/Profilepage.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
 
 function App() {
-  const { isAuthenticated, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="min-h-dvh flex items-center justify-center px-4">
+        <div className="rounded-2xl border border-white/80 bg-white/80 px-8 py-6 text-center shadow-sm backdrop-blur">
+          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <p className="text-sm font-medium text-slate-700">Preparing your workspace...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -35,14 +43,9 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" />
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
+          element={<Navigate to="/home" replace />}
         />
+        <Route path="/home" element={<Homepage />} />
 
         <Route path="/register" element={<Registerpage />} />
         <Route path="/login" element={<Loginpage />} />

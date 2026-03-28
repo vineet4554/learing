@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/Authcontext";
 import authService from "../../services/authService";
-import { BrainCircuit, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
+import appLogo from "../../assets/learnforge-logo.svg";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -47,9 +48,7 @@ function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white/95 backdrop-blur rounded-3xl shadow-xl p-5 sm:p-8 border border-white/70">
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg">
-              <BrainCircuit className="w-8 h-8 text-white" strokeWidth={2.5} />
-            </div>
+            <img src={appLogo} alt="LearnForge logo" className="w-16 h-16 rounded-2xl shadow-lg" />
           </div>
 
           <div className="text-center mb-8">
@@ -113,7 +112,7 @@ function LoginPage() {
                   onFocus={() => setFocusedField("password")}
                   onBlur={() => setFocusedField(null)}
                   className="w-full bg-transparent outline-none text-gray-700 placeholder-gray-400"
-                  placeholder="••••••••"
+                  placeholder="********"
                 />
                 <button
                   type="button"
@@ -167,5 +166,6 @@ function LoginPage() {
 }
 
 export default LoginPage;
+
 
 

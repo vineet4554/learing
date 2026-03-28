@@ -367,21 +367,10 @@ export const explainConcept = async (req, res, next) => {
     }
 
     const chunks = findRelevantChunks(sourceChunks, concept, 3, false);
-
-    if (!chunks || chunks.length === 0) {
-      return res.json({
-        success: true,
-        message: "Concept not found in this file",
-        data: {
-          concept,
-          explanation:
-            "I could not find this concept in the current file. Try using exact words from the file text.",
-          relativeChunks: [],
-        },
-      });
-    }
-
-    const contextText = chunks.map((c) => c.content).join("\n\n");
+    const hasRelevantChunks = Array.isArray(chunks) && chunks.length > 0;
+    const contextText = hasRelevantChunks
+      ? chunks.map((c) => c.content).join("\n\n")
+      : "";
 
     let explanation;
     try {
@@ -398,11 +387,15 @@ export const explainConcept = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Response generated successfully",
+      message: hasRelevantChunks
+        ? "Response generated successfully"
+        : "Concept not found in file, generated general explanation",
       data: {
         concept,
         explanation,
-        relativeChunks: chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number"),
+        relativeChunks: hasRelevantChunks
+          ? chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number")
+          : [],
       },
     });
   } catch (error) {

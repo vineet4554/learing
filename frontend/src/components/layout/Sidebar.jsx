@@ -54,25 +54,23 @@ function Sidebar({ isSidebarOpen, toggleSidebar }) {
 
   return (
     <>
-      {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/45 md:hidden"
+          onClick={toggleSidebar}
         />
       )}
 
-      {/* Sidebar */}
       <aside
         ref={sidebarRef}
         className={`
-          fixed top-0 left-0 h-dvh bg-white/95 backdrop-blur border-r border-gray-200/80
-          w-[17rem] z-50 transform transition-transform duration-300 ease-in-out
+          fixed top-0 left-0 h-dvh w-[17rem] border-r border-white/70 bg-white/85 backdrop-blur-xl
+          z-50 transform transition-transform duration-300 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
         <div className="flex flex-col h-full">
-          {/* Logo Section */}
-          <div className="relative flex items-center justify-between px-5 py-4 border-b border-gray-200/80">
+          <div className="relative flex items-center justify-between border-b border-slate-200/70 px-5 py-4">
             <Link
               to="/dashboard"
               onClick={() => {
@@ -80,29 +78,28 @@ function Sidebar({ isSidebarOpen, toggleSidebar }) {
                   toggleSidebar();
                 }
               }}
-              className="flex items-center gap-3 pr-12 min-w-0"
+              className="flex min-w-0 items-center gap-3 pr-12"
             >
               <img
                 src={learnforgeLogo}
-                alt="learnforge logo"
-                className="w-10 h-10 rounded-xl shadow-lg"
+                alt="LearnForge logo"
+                className="h-10 w-10 rounded-xl shadow-lg"
               />
-              <span className="font-bold text-gray-900 text-lg whitespace-nowrap truncate">
-                learnforge
+              <span className="truncate whitespace-nowrap text-lg font-bold text-slate-900">
+                LearnForge
               </span>
             </Link>
             {isSidebarOpen && (
               <button
                 onClick={toggleSidebar}
-                className="md:hidden absolute right-4 top-4 p-2 rounded-lg hover:bg-gray-100 transition-colors z-10"
+                className="absolute right-4 top-4 z-10 rounded-lg p-2 transition hover:bg-slate-100 md:hidden"
                 aria-label="Close sidebar"
               >
-                <X className="w-5 h-5 text-gray-600" />
+                <X className="w-5 h-5 text-slate-600" />
               </button>
             )}
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 px-3 py-5">
             <ul className="space-y-2">
               {navItems.map((item) => {
@@ -118,10 +115,10 @@ function Sidebar({ isSidebarOpen, toggleSidebar }) {
                         }
                       }}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 ${
+                        `flex items-center gap-3 rounded-xl px-4 py-3 font-medium transition-all duration-200 ${
                           isActive
-                            ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-white shadow-lg shadow-emerald-500/25'
-                            : 'text-gray-600 hover:bg-emerald-50 hover:text-gray-900'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25'
+                            : 'text-slate-600 hover:bg-emerald-50 hover:text-slate-900'
                         }`
                       }
                     >
@@ -138,11 +135,10 @@ function Sidebar({ isSidebarOpen, toggleSidebar }) {
             </ul>
           </nav>
 
-          {/* Footer - Logout Button */}
-          <div className="px-3 py-4 border-t border-gray-200/80">
+          <div className="border-t border-slate-200/70 px-3 py-4">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium text-red-600 transition-all duration-200 hover:bg-red-50 hover:text-red-700"
             >
               <LogOut className="w-5 h-5" />
               <span>Logout</span>

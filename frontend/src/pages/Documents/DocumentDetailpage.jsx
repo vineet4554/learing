@@ -355,7 +355,7 @@ function DocumentDetailpage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="overflow-hidden rounded-3xl border border-white/70 bg-gray-50/80 shadow-sm">
       <DocumentDetailHeader
         title={document.title}
         onBack={() => navigate("/documents")}

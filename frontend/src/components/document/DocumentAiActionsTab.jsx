@@ -14,6 +14,8 @@ function DocumentAiActionsTab({
   onGenerateSummary,
   onOpenExplainConcept,
 }) {
+  const arrow = "\u2192";
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <button
@@ -36,7 +38,7 @@ function DocumentAiActionsTab({
           studying
         </p>
         <div className="text-purple-600 font-semibold">
-          {generating.flashcards ? "Generating..." : "Generate Now ->"}
+          {generating.flashcards ? "Generating..." : `Generate Now ${arrow}`}
         </div>
       </button>
 
@@ -59,7 +61,7 @@ function DocumentAiActionsTab({
           Create a quiz to test your understanding of this document.
         </p>
         <div className="text-emerald-600 font-semibold">
-          {generating.quiz ? "Generating..." : "Generate Now ->"}
+          {generating.quiz ? "Generating..." : `Generate Now ${arrow}`}
         </div>
       </button>
 
@@ -82,7 +84,7 @@ function DocumentAiActionsTab({
           Get a concise summary highlighting the key points of the document.
         </p>
         <div className="text-blue-600 font-semibold">
-          {generating.summary ? "Generating..." : "Generate Now ->"}
+          {generating.summary ? "Generating..." : `Generate Now ${arrow}`}
         </div>
       </button>
 
@@ -99,7 +101,7 @@ function DocumentAiActionsTab({
         <p className="text-gray-600 mb-4">
           Ask any concept from this file and get a clear explanation.
         </p>
-        <div className="text-orange-600 font-semibold">Open Explain Chat -></div>
+        <div className="text-orange-600 font-semibold">{`Open Explain Chat ${arrow}`}</div>
       </button>
     </div>
   );

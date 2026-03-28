@@ -102,68 +102,66 @@ function FlashcardsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Flashcards</h1>
-          <p className="text-sm sm:text-base text-gray-600">
-            {flashcardSets.length} flashcard set{flashcardSets.length !== 1 ? 's' : ''} available
-          </p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="rounded-3xl border border-white/70 bg-white/85 p-4 shadow-sm backdrop-blur sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="mb-1 text-2xl font-bold text-gray-900 sm:mb-2 sm:text-3xl">Flashcards</h1>
+            <p className="text-sm text-gray-600 sm:text-base">
+              {flashcardSets.length} flashcard set{flashcardSets.length !== 1 ? 's' : ''} available
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:gap-3">
+            <button
+              onClick={() => setFilterBy('all')}
+              className={`whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors sm:px-4 sm:text-base ${
+                filterBy === 'all'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterBy('in-progress')}
+              className={`whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors sm:px-4 sm:text-base ${
+                filterBy === 'in-progress'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              In Progress
+            </button>
+            <button
+              onClick={() => setFilterBy('completed')}
+              className={`whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors sm:px-4 sm:text-base ${
+                filterBy === 'completed'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Completed
+            </button>
+          </div>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-1">
-          <button
-            onClick={() => setFilterBy('all')}
-            className={`whitespace-nowrap px-3 py-2 sm:px-4 rounded-xl text-sm sm:text-base font-medium transition-colors ${
-              filterBy === 'all'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilterBy('in-progress')}
-            className={`whitespace-nowrap px-3 py-2 sm:px-4 rounded-xl text-sm sm:text-base font-medium transition-colors ${
-              filterBy === 'in-progress'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            In Progress
-          </button>
-          <button
-            onClick={() => setFilterBy('completed')}
-            className={`whitespace-nowrap px-3 py-2 sm:px-4 rounded-xl text-sm sm:text-base font-medium transition-colors ${
-              filterBy === 'completed'
-                ? 'bg-emerald-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Completed
-          </button>
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search flashcard sets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl border-2 border-gray-200 bg-gray-50 py-2.5 pl-11 pr-3 text-sm outline-none transition-colors focus:border-emerald-400 sm:py-3 sm:pl-12 sm:pr-4 sm:text-base"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search flashcard sets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-3 sm:pl-12 sm:pr-4 py-2.5 sm:py-3 bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:border-emerald-400 transition-colors text-sm sm:text-base"
-          />
-        </div>
-      </div>
-
-      {/* Flashcard Sets Grid */}
       {filteredSets.length === 0 ? (
-        <div className="text-center py-12 sm:py-16 bg-white rounded-2xl px-4">
+        <div className="rounded-2xl bg-white px-4 py-12 text-center sm:py-16">
           <BookOpen className="w-14 h-14 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
             {searchQuery || filterBy !== 'all' 

@@ -37,11 +37,7 @@ function Dashboardpage() {
     try {
       setLoading(true);
       setError(null);
-      
-      // The service already returns response.data, so we use it directly
       const data = await progressService.getDashboardData();
-      console.log('Dashboard data:', data);
-      
       setDashboardData(data);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
@@ -158,8 +154,8 @@ function Dashboardpage() {
       label: 'TOTAL FLASHCARDS',
       value: overview.totalFlashcards || 0,
       icon: BookOpen,
-      bgGradient: 'from-purple-400 to-pink-500',
-      shadowColor: 'shadow-purple-500/20',
+      bgGradient: 'from-cyan-400 to-blue-500',
+      shadowColor: 'shadow-cyan-500/20',
       path: '/flashcards',
     },
     {
@@ -312,7 +308,7 @@ function Dashboardpage() {
                             </span>
                             {activity.meta && (
                               <>
-                                <span>•</span>
+                                <span>|</span>
                                 <span>{activity.meta}</span>
                               </>
                             )}
@@ -350,3 +346,4 @@ function Dashboardpage() {
 }
 
 export default Dashboardpage;
+

@@ -77,7 +77,7 @@ function StylishProfilePage() {
     try {
       toast.success("Account deleted");
       logout();
-      navigate("/login");
+      navigate("/home");
     } catch {
       toast.error("Failed to delete account");
     }
@@ -144,7 +144,7 @@ function StylishProfilePage() {
             <button
               onClick={() => {
                 logout();
-                navigate("/login");
+                navigate("/home");
               }}
               className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl flex items-center gap-2 hover:bg-gray-200 transition-colors"
             >
