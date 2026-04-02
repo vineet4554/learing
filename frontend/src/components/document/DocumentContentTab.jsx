@@ -1,7 +1,7 @@
 import React from "react";
 import { ExternalLink, FileText } from "lucide-react";
 
-function DocumentContentTab({ document, summary, getDocumentUrl }) {
+function DocumentContentTab({ document, summary, getDocumentUrl, showSummary = true }) {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -36,7 +36,7 @@ function DocumentContentTab({ document, summary, getDocumentUrl }) {
         )}
       </div>
 
-      {summary && (
+      {showSummary && summary && (
         <div className="bg-white rounded-2xl shadow-sm mt-6 p-6 border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             AI Summary

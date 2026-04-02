@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   FileText,
   BookOpen,
+  FileQuestion,
   User,
   LogOut,
   X,
@@ -19,6 +20,7 @@ function Sidebar({ isSidebarOpen, toggleSidebar }) {
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/documents', icon: FileText, label: 'Documents' },
     { path: '/flashcards', icon: BookOpen, label: 'Flashcards' },
+    { path: '/quizzes', icon: FileQuestion, label: 'Quizzes' },
     { path: '/profile', icon: User, label: 'Profile' }
   ];
 

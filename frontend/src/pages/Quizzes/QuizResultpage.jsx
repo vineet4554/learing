@@ -52,9 +52,9 @@ function QuizResultpage() {
     totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="quiz-result-page min-h-screen bg-slate-50">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
+      <div className="quiz-result-header bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -69,7 +69,7 @@ function QuizResultpage() {
       {/* Content */}
       <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
         {/* Hero */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="quiz-result-hero relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-400/20 blur-3xl" />
           <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-gradient-to-br from-indigo-500/10 to-blue-400/10 blur-3xl" />
 
@@ -129,7 +129,7 @@ function QuizResultpage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+          <div className="quiz-result-stat bg-white border border-slate-200 rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Total Questions
             </p>
@@ -137,7 +137,7 @@ function QuizResultpage() {
               {totalQuestions}
             </p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+          <div className="quiz-result-stat bg-white border border-slate-200 rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Accuracy
             </p>
@@ -145,7 +145,7 @@ function QuizResultpage() {
               {percentage}%
             </p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+          <div className="quiz-result-stat bg-white border border-slate-200 rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Missed
             </p>
@@ -166,14 +166,14 @@ function QuizResultpage() {
 
           <button
             onClick={() => navigate(`/quizzes/${id}/answers`)}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-semibold border border-slate-200 transition-colors"
+            className="quiz-result-secondary-btn inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-semibold border border-slate-200 transition-colors"
           >
             Detail Answers
           </button>
 
           <button
             onClick={() => navigate("/documents")}
-            className="inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-semibold border border-slate-200 transition-colors"
+            className="quiz-result-secondary-btn inline-flex items-center gap-2 px-5 py-3 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-semibold border border-slate-200 transition-colors"
           >
             Back to Documents
           </button>

@@ -12,6 +12,9 @@ function DocumentChatTab({
   chatInput,
   onChatInputChange,
   onChatSubmit,
+  emptyTitle = "Start a conversation",
+  emptyDescription = "Ask questions, request explanations, or get insights",
+  inputPlaceholder = "Ask a question...",
 }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-[600px] flex flex-col">
@@ -20,10 +23,10 @@ function DocumentChatTab({
           <div className="text-center py-12">
             <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 mb-2">
-              Start a conversation
+              {emptyTitle}
             </p>
             <p className="text-sm text-gray-500">
-              Ask questions, request explanations, or get insights
+              {emptyDescription}
             </p>
           </div>
         ) : (
@@ -65,7 +68,7 @@ function DocumentChatTab({
             type="text"
             value={chatInput}
             onChange={onChatInputChange}
-            placeholder="Ask a question..."
+            placeholder={inputPlaceholder}
             className="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
             disabled={chatLoading}
           />

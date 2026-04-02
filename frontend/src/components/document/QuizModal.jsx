@@ -5,6 +5,13 @@ function QuizModal({
   onClose,
   quizTitle,
   onTitleChange,
+  quizTopic,
+  onTopicChange,
+  showDocumentSelector = false,
+  documents = [],
+  selectedDocumentId = "",
+  onDocumentChange,
+  loadingDocuments = false,
   quizQuestionCount,
   onQuestionCountChange,
   onSubmit,
@@ -26,6 +33,29 @@ function QuizModal({
         </div>
 
         <div className="px-6 py-5 space-y-4">
+          {showDocumentSelector && (
+            <div>
+              <label className="block text-sm font-semibold text-emerald-900 mb-2">
+                Document
+              </label>
+              <select
+                value={selectedDocumentId}
+                onChange={onDocumentChange}
+                className="w-full px-4 py-3 rounded-xl border border-emerald-100 focus:border-emerald-400 outline-none bg-white"
+                disabled={loadingDocuments || generating.quiz}
+              >
+                <option value="">
+                  {loadingDocuments ? "Loading documents..." : "Select a document"}
+                </option>
+                {documents.map((doc) => (
+                  <option key={doc._id} value={doc._id}>
+                    {doc.title || "Untitled"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-semibold text-emerald-900 mb-2">
               Quiz Title
@@ -37,6 +67,22 @@ function QuizModal({
               placeholder="Enter quiz title"
               className="w-full px-4 py-3 rounded-xl border border-emerald-100 focus:border-emerald-400 outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-emerald-900 mb-2">
+              Topic Name (Optional)
+            </label>
+            <input
+              type="text"
+              value={quizTopic}
+              onChange={onTopicChange}
+              placeholder="e.g. Photosynthesis, JavaScript Closures"
+              className="w-full px-4 py-3 rounded-xl border border-emerald-100 focus:border-emerald-400 outline-none"
+            />
+            <p className="text-xs text-emerald-700/70 mt-2">
+              If provided, quiz questions are generated from this topic.
+            </p>
           </div>
 
           <div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Lightbulb, MessageSquare, X } from "lucide-react";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS, BASE_URL } from "../../utils/apiPaths.js";
 import documentService from "../../services/documentservice.js";
@@ -18,14 +19,17 @@ import SummaryModal from "../../components/document/SummaryModal.jsx";
 import DocumentLoadingState from "../../components/document/DocumentLoadingState.jsx";
 import DocumentNotFound from "../../components/document/DocumentNotFound.jsx";
 import ConfirmModal from "../../components/common/ConfirmModal.jsx";
+import { useLayout } from "../../context/LayoutContext.jsx";
 
 function DocumentDetailpage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { setIsSidebarHidden } = useLayout();
   
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("content");
+  const [isAIFocusMode, setIsAIFocusMode] = useState(false);
   const [generating, setGenerating] = useState({
     flashcards: false,
     quiz: false,
@@ -50,9 +54,11 @@ function DocumentDetailpage() {
   const [conceptLoading, setConceptLoading] = useState(false);
   const [conceptMessages, setConceptMessages] = useState([]);
   const [quizTitle, setQuizTitle] = useState("");
+  const [quizTopic, setQuizTopic] = useState("");
   const [quizQuestionCount, setQuizQuestionCount] = useState(5);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingDocument, setDeletingDocument] = useState(false);
+  const [assistantMode, setAssistantMode] = useState("chat");
 
   useEffect(() => {
     setQuizCount(null);
@@ -62,6 +68,11 @@ function DocumentDetailpage() {
     fetchDocument();
     fetchChatHistory();
   }, [id]);
+
+  useEffect(() => {
+    setIsSidebarHidden(isAIFocusMode);
+    return () => setIsSidebarHidden(false);
+  }, [isAIFocusMode, setIsSidebarHidden]);
 
   const fetchChatHistory = async () => {
     try {
@@ -157,13 +168,13 @@ function DocumentDetailpage() {
     }
   };
 
-  const handleGenerateQuiz = async ({ title, numberOfQuestions } = {}) => {
+  const handleGenerateQuiz = async ({ title, numberOfQuestions, topicName } = {}) => {
     setGenerating({ ...generating, quiz: true });
     
     try {
       const response = await axiosInstance.post(
         API_PATHS.AI.GENERATE_QUIZ,
-        { documentId: id, title, numberOfQuestions }
+        { documentId: id, title, numberOfQuestions, topicName }
       );
       
       if (response.data.success) {
@@ -184,6 +195,7 @@ function DocumentDetailpage() {
 
   const openQuizModal = () => {
     setQuizTitle(document?.title ? `Quiz: ${document.title}` : "");
+    setQuizTopic("");
     setQuizQuestionCount(5);
     setShowQuizModal(true);
   };
@@ -194,6 +206,7 @@ function DocumentDetailpage() {
 
   const handleQuizModalSubmit = () => {
     const trimmedTitle = quizTitle.trim();
+    const trimmedTopic = quizTopic.trim();
     const count = Number(quizQuestionCount);
 
     if (!trimmedTitle) {
@@ -205,7 +218,11 @@ function DocumentDetailpage() {
       return;
     }
 
-    handleGenerateQuiz({ title: trimmedTitle, numberOfQuestions: count });
+    handleGenerateQuiz({
+      title: trimmedTitle,
+      numberOfQuestions: count,
+      topicName: trimmedTopic || undefined,
+    });
   };
 
   const handleGenerateSummary = async () => {
@@ -341,10 +358,23 @@ function DocumentDetailpage() {
   const tabs = [
     { id: "content", label: "Content" },
     { id: "chat", label: "Chat" },
-    { id: "ai-actions", label: "AI Actions" },
+    { id: "ai-actions", label: "AI Option" },
     { id: "flashcards", label: "Flashcards" },
     { id: "quizzes", label: "Quizzes" },
   ];
+
+  const handleTabChange = (tabId) => {
+    if (tabId !== "content") {
+      setIsAIFocusMode(false);
+    }
+
+    setActiveTab(tabId);
+  };
+
+  const handleExitAIFocus = () => {
+    setIsAIFocusMode(false);
+    setActiveTab("content");
+  };
 
   if (loading) {
     return <DocumentLoadingState />;
@@ -375,18 +405,104 @@ function DocumentDetailpage() {
       <DocumentTabs
         tabs={tabs}
         activeTab={activeTab}
-        onChange={setActiveTab}
+        onChange={handleTabChange}
       />
 
       {/* Tab Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Content Tab */}
         {activeTab === "content" && (
-          <DocumentContentTab
-            document={document}
-            summary={summary}
-            getDocumentUrl={getDocumentUrl}
-          />
+          isAIFocusMode ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-1">
+                  <button
+                    onClick={() => setAssistantMode("chat")}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                      assistantMode === "chat"
+                        ? "bg-emerald-600 text-white"
+                        : "text-emerald-700 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Chat With Document
+                  </button>
+                  <button
+                    onClick={() => setAssistantMode("explain")}
+                    className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                      assistantMode === "explain"
+                        ? "bg-emerald-600 text-white"
+                        : "text-emerald-700 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <Lightbulb className="h-4 w-4" />
+                    Explain Concept
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleExitAIFocus}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                >
+                  <X className="h-4 w-4" />
+                  Close AI Help
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <DocumentContentTab
+                  document={document}
+                  summary={summary}
+                  getDocumentUrl={getDocumentUrl}
+                  showSummary={false}
+                />
+
+                {assistantMode === "chat" ? (
+                  <DocumentChatTab
+                    chatMessages={chatMessages}
+                    chatLoading={chatLoading || chatHistoryLoading}
+                    chatInput={chatInput}
+                    onChatInputChange={(e) => setChatInput(e.target.value)}
+                    onChatSubmit={handleChatSubmit}
+                    emptyTitle="Chat with your document"
+                    emptyDescription="Ask questions directly from the document content."
+                    inputPlaceholder="Ask about this document..."
+                  />
+                ) : (
+                  <DocumentChatTab
+                    chatMessages={conceptMessages}
+                    chatLoading={conceptLoading}
+                    chatInput={conceptInput}
+                    onChatInputChange={(e) => setConceptInput(e.target.value)}
+                    onChatSubmit={handleExplainConceptSubmit}
+                    emptyTitle="Explain any concept"
+                    emptyDescription="Type a concept name and get a clear explanation from this document."
+                    inputPlaceholder="Ask a concept (e.g. recursion, balance sheet, photosynthesis)"
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setAssistantMode("chat");
+                    setIsAIFocusMode(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  AI Help
+                </button>
+              </div>
+              <DocumentContentTab
+                document={document}
+                summary={summary}
+                getDocumentUrl={getDocumentUrl}
+              />
+            </div>
+          )
         )}
 
         {/* Chat Tab */}
@@ -443,6 +559,8 @@ function DocumentDetailpage() {
         onClose={() => setShowQuizModal(false)}
         quizTitle={quizTitle}
         onTitleChange={(e) => setQuizTitle(e.target.value)}
+        quizTopic={quizTopic}
+        onTopicChange={(e) => setQuizTopic(e.target.value)}
         quizQuestionCount={quizQuestionCount}
         onQuestionCountChange={(e) => setQuizQuestionCount(e.target.value)}
         onSubmit={handleQuizModalSubmit}

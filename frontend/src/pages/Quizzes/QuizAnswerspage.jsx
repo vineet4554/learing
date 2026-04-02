@@ -42,9 +42,9 @@ function QuizAnswerspage() {
   }
 
   return (
-    <div className="min-h-screen bg-emerald-50/40">
+    <div className="quiz-answers-page min-h-screen bg-emerald-50/40">
       {/* Header */}
-      <div className="bg-white border-b border-emerald-100 px-6 py-4">
+      <div className="quiz-answers-header bg-white border-b border-emerald-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
@@ -60,7 +60,7 @@ function QuizAnswerspage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-10">
-        <div className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-6 mb-6">
+        <div className="quiz-answers-summary bg-white rounded-3xl border border-emerald-100 shadow-sm p-6 mb-6">
           <h1 className="text-2xl font-bold text-emerald-950">
             Answer Details
           </h1>
@@ -73,7 +73,7 @@ function QuizAnswerspage() {
           {result.results.map((item) => (
             <div
               key={item.questionIndex}
-              className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-6"
+              className="quiz-answers-card bg-white rounded-3xl border border-emerald-100 shadow-sm p-6"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

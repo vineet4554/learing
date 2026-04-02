@@ -48,6 +48,7 @@ function Dashboardpage() {
     }
   };
 
+
   // Helper function to get navigation path based on activity type
   const getActivityNavigationPath = (activity) => {
     const type = activity.type?.toLowerCase() || '';
@@ -341,6 +342,7 @@ function Dashboardpage() {
           )}
         </div>
       </div>
+
     </div>
   );
 }

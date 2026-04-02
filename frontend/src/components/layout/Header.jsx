@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Menu, Bell, User, X, LogOut, Settings } from "lucide-react";
+import { Menu, Bell, User, X, LogOut, Settings, Sun, Moon } from "lucide-react";
 import { useAuth } from "../../context/Authcontext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
 import { useLocation, useNavigate } from "react-router-dom";
 
-function Header({ toggleSidebar }) {
+function Header({ toggleSidebar, isSidebarHidden = false }) {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -14,6 +16,7 @@ function Header({ toggleSidebar }) {
     "/dashboard": "Dashboard",
     "/documents": "Documents",
     "/flashcards": "Flashcards",
+    "/quizzes": "Quizzes",
     "/profile": "Profile",
   };
   const pageTitle =
@@ -33,16 +36,18 @@ function Header({ toggleSidebar }) {
   }, [profileOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 md:left-[17rem] z-40 h-16 border-b border-white/70 bg-white/75 backdrop-blur-xl">
+    <header className={`fixed top-0 left-0 right-0 ${isSidebarHidden ? "" : "md:left-[17rem]"} z-40 h-16 border-b border-white/70 bg-white/75 backdrop-blur-xl`}>
       <div className="flex h-full items-center justify-between px-3 sm:px-5 md:px-6">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            onClick={toggleSidebar}
-            className="md:hidden rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
-            aria-label="Toggle sidebar"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {!isSidebarHidden && (
+            <button
+              onClick={toggleSidebar}
+              className="md:hidden rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 sm:text-base">{pageTitle}</p>
             <p className="hidden text-xs text-slate-500 sm:block">
@@ -52,6 +57,15 @@ function Header({ toggleSidebar }) {
         </div>
 
         <div className="flex items-center gap-2 md:gap-4">
+          <button
+            onClick={toggleTheme}
+            className="relative rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Switch to bright mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+
           <button
             onClick={() => navigate("/dashboard#recent-activity")}
             className="relative rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"

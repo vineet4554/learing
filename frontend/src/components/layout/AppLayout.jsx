@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Header from "./Header.jsx";
+import { LayoutProvider, useLayout } from "../../context/LayoutContext.jsx";
 
-function AppLayout() {
+function AppLayoutInner() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { isSidebarHidden } = useLayout();
 
   const toggleSidebar = () => {
     setIsSidebarOpen((prev) => !prev);
@@ -13,12 +15,14 @@ function AppLayout() {
   return (
     <div className="min-h-dvh bg-transparent">
       {/* Sidebar */}
-      <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      {!isSidebarHidden && (
+        <Sidebar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      )}
 
       {/* Main Content Area */}
-      <div className="min-h-dvh min-w-0 md:ml-[17rem]">
+      <div className={`min-h-dvh min-w-0 ${isSidebarHidden ? "" : "md:ml-[17rem]"}`}>
         {/* Header */}
-        <Header toggleSidebar={toggleSidebar} />
+        <Header toggleSidebar={toggleSidebar} isSidebarHidden={isSidebarHidden} />
 
         {/* Page Content - This is where nested routes render */}
         <main className="min-h-dvh pt-16">
@@ -28,6 +32,14 @@ function AppLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+function AppLayout() {
+  return (
+    <LayoutProvider>
+      <AppLayoutInner />
+    </LayoutProvider>
   );
 }
 

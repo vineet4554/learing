@@ -161,7 +161,7 @@ export default function DocumentListPage() {
 
   const DocumentCard = ({ doc }) => (
     <div
-      className="bg-white/85 backdrop-blur rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-2xl transition relative group cursor-pointer border border-gray-100"
+      className="docs-card bg-white/85 backdrop-blur rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-2xl transition relative group cursor-pointer border border-gray-100"
       onClick={() => navigate(`/documents/${doc._id}`)}
     >
       <button
@@ -208,9 +208,9 @@ export default function DocumentListPage() {
   }
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-emerald-50 via-white to-teal-50 rounded-3xl border border-white/70 shadow-sm overflow-hidden">
+    <div className="documents-page-shell min-h-full rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-gray-100">
+      <div className="documents-sticky-header sticky top-0 z-30 backdrop-blur border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
@@ -245,7 +245,7 @@ export default function DocumentListPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search your documents..."
-            className="w-full pl-11 sm:pl-12 pr-4 py-2.5 sm:py-3 border-2 rounded-2xl outline-none focus:border-emerald-400 shadow-sm bg-white"
+            className="docs-search-input w-full pl-11 sm:pl-12 pr-4 py-2.5 sm:py-3 border-2 rounded-2xl outline-none focus:border-emerald-400 shadow-sm bg-white"
           />
         </div>
 
@@ -267,7 +267,7 @@ export default function DocumentListPage() {
       {/* Upload Modal */}
       {uploadModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md relative shadow-2xl">
+          <div className="documents-upload-modal bg-white rounded-3xl p-8 w-full max-w-md relative shadow-2xl">
             <button
               onClick={() => setUploadModalOpen(false)}
               className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-xl"

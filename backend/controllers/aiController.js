@@ -68,7 +68,8 @@ export const generateFlashcards = async (req, res, next) => {
 // ================= GENERATE QUIZ =================
 export const generateQuiz = async (req, res, next) => {
   try {
-    const { documentId, numberOfQuestions = 5, title } = req.body;
+    const { documentId, numberOfQuestions = 5, title, topicName } = req.body;
+    const trimmedTopic = topicName?.trim();
 
     // Validate documentId
     if (!mongoose.Types.ObjectId.isValid(documentId)) {
@@ -92,8 +93,15 @@ export const generateQuiz = async (req, res, next) => {
       });
     }
 
+    const quizSourceText = trimmedTopic
+      ? `Generate a quiz focused on this topic: ${trimmedTopic}`
+      : document.extractedText;
+
     // Generate quiz using AI
-    const aiQuestions = await geminiService.generateQuiz(document.extractedText, parseInt(numberOfQuestions));
+    const aiQuestions = await geminiService.generateQuiz(
+      quizSourceText,
+      parseInt(numberOfQuestions)
+    );
 
 
     const transformedQuestions = aiQuestions.map(q => ({
@@ -108,8 +116,10 @@ export const generateQuiz = async (req, res, next) => {
     const quiz = await Quiz.create({
       userId: req.user._id,
       documentId: documentId,
-      title: title || `Quiz: ${document.title}`,
-      description: `Quiz generated from ${document.title}`,
+      title: title || `Quiz: ${trimmedTopic || document.title}`,
+      description: trimmedTopic
+        ? `Quiz generated for topic "${trimmedTopic}" in ${document.title}`
+        : `Quiz generated from ${document.title}`,
       questions: transformedQuestions,  
       userAnswers: [],
       score: 0

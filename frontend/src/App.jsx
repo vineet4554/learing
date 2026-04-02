@@ -17,6 +17,7 @@ import DocumentDetailpage from "./pages/Documents/DocumentDetailpage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import FlashcardListpage from "./pages/Flashcards/FlashcardListpage.jsx";
 import Flashcardpage from "./pages/Flashcards/Flashcardpage.jsx";
+import QuizzesPage from "./pages/Quizzes/QuizzesPage.jsx";
 import QuizTakepage from "./pages/Quizzes/QuizTakepage.jsx";
 import QuizResultpage from "./pages/Quizzes/QuizResultpage.jsx";
 import QuizAnswerspage from "./pages/Quizzes/QuizAnswerspage.jsx";
@@ -57,6 +58,7 @@ function App() {
           <Route path="/documents/:id" element={<DocumentDetailpage />} />
           <Route path="/flashcards" element={<FlashcardListpage />} />
           <Route path="/documents/:id/flashcards" element={<Flashcardpage />} />
+          <Route path="/quizzes" element={<QuizzesPage />} />
           <Route path="/quizzes/:id" element={<QuizTakepage />} />
           <Route path="/quizzes/:id/results" element={<QuizResultpage />} />
           <Route path="/quizzes/:id/answers" element={<QuizAnswerspage />} />
