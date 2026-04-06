@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Loader2,
   MessageSquare,
@@ -12,10 +12,29 @@ function DocumentChatTab({
   chatInput,
   onChatInputChange,
   onChatSubmit,
+  isActive = true,
   emptyTitle = "Start a conversation",
   emptyDescription = "Ask questions, request explanations, or get insights",
   inputPlaceholder = "Ask a question...",
 }) {
+  const endRef = useRef(null);
+
+  const scrollToLatest = () => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  };
+
+  useEffect(() => {
+    scrollToLatest();
+  }, [chatMessages, chatLoading]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const timer = window.setTimeout(() => {
+      scrollToLatest();
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [isActive]);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-[600px] flex flex-col">
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -60,6 +79,7 @@ function DocumentChatTab({
             </div>
           </div>
         )}
+        <div ref={endRef} />
       </div>
 
       <form onSubmit={onChatSubmit} className="border-t border-gray-200 p-4">

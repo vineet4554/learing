@@ -464,6 +464,7 @@ function DocumentDetailpage() {
                     chatInput={chatInput}
                     onChatInputChange={(e) => setChatInput(e.target.value)}
                     onChatSubmit={handleChatSubmit}
+                    isActive={activeTab === "content" && isAIFocusMode && assistantMode === "chat"}
                     emptyTitle="Chat with your document"
                     emptyDescription="Ask questions directly from the document content."
                     inputPlaceholder="Ask about this document..."
@@ -475,6 +476,7 @@ function DocumentDetailpage() {
                     chatInput={conceptInput}
                     onChatInputChange={(e) => setConceptInput(e.target.value)}
                     onChatSubmit={handleExplainConceptSubmit}
+                    isActive={activeTab === "content" && isAIFocusMode && assistantMode === "explain"}
                     emptyTitle="Explain any concept"
                     emptyDescription="Type a concept name and get a clear explanation from this document."
                     inputPlaceholder="Ask a concept (e.g. recursion, balance sheet, photosynthesis)"
@@ -513,6 +515,7 @@ function DocumentDetailpage() {
             chatInput={chatInput}
             onChatInputChange={(e) => setChatInput(e.target.value)}
             onChatSubmit={handleChatSubmit}
+            isActive={activeTab === "chat"}
           />
         )}
 
