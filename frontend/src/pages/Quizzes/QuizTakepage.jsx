@@ -11,10 +11,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useLayout } from "../../context/LayoutContext.jsx";
 
 function QuizTakepage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { setIsSidebarHidden, setIsHeaderHidden, setIsContentPaddingHidden } = useLayout();
 
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,17 @@ function QuizTakepage() {
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarHidden(true);
+    setIsHeaderHidden(true);
+    setIsContentPaddingHidden(true);
+    return () => {
+      setIsSidebarHidden(false);
+      setIsHeaderHidden(false);
+      setIsContentPaddingHidden(false);
+    };
+  }, [setIsSidebarHidden, setIsHeaderHidden, setIsContentPaddingHidden]);
 
   useEffect(() => {
     fetchQuiz();
@@ -121,10 +134,10 @@ function QuizTakepage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center bg-emerald-50/40 dark:bg-slate-950">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-gray-600">Loading quiz...</p>
+          <p className="text-gray-600 dark:text-slate-400">Loading quiz...</p>
         </div>
       </div>
     );
@@ -132,10 +145,10 @@ function QuizTakepage() {
 
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-dvh flex items-center justify-center bg-emerald-50/40 dark:bg-slate-950">
+        <div className="text-center p-6">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Quiz not found</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">Quiz not found</h2>
           <button
             onClick={() => navigate("/documents")}
             className="text-emerald-500 font-semibold hover:text-emerald-600"
@@ -153,46 +166,46 @@ function QuizTakepage() {
   const unansweredCount = totalQuestions - answeredCount;
 
   return (
-    <div className="min-h-screen bg-emerald-50/40">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 space-y-3">
+    <div className="min-h-dvh bg-emerald-50/40 dark:bg-slate-950 flex flex-col transition-colors duration-200 pb-12">
+      <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 pt-4 space-y-3">
         {/* Header */}
-        <div className="bg-white rounded-2xl border border-emerald-100 px-6 py-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-emerald-100 dark:border-slate-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => setShowExitModal(true)}
-              className="flex items-center gap-2 text-emerald-700 hover:text-emerald-900 transition-colors"
+              className="flex items-center gap-2 text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors font-medium"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Exit Quiz</span>
+              <span>Exit Quiz</span>
             </button>
 
-            <div className="text-xs text-emerald-700/80">
+            <div className="text-xs text-emerald-700/80 dark:text-emerald-400/80 font-medium">
               Question {currentQuestionIndex + 1} of {totalQuestions}
             </div>
           </div>
         </div>
 
         {/* Quiz Title */}
-        <div className="bg-white rounded-2xl border border-emerald-100 px-6 py-6">
-          <h1 className="text-2xl font-bold text-emerald-950 mb-1">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-emerald-100 dark:border-slate-800 px-6 py-6">
+          <h1 className="text-2xl font-bold text-emerald-950 dark:text-emerald-100 mb-1">
             {quiz.title || "Quiz"}
           </h1>
-          <p className="text-xs text-emerald-700/70">
+          <p className="text-xs text-emerald-700/70 dark:text-emerald-400/70">
             {answeredCount} answered
           </p>
         </div>
       </div>
 
       {/* Question Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-        <div className="bg-white rounded-3xl border border-emerald-100 shadow-sm p-8">
+      <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 py-6">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-emerald-100 dark:border-slate-800 shadow-sm p-6 sm:p-8">
           {/* Question Number Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full mb-6 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-full mb-6 text-xs font-semibold">
             Question {currentQuestionIndex + 1}
           </div>
 
           {/* Question Text */}
-          <h2 className="text-2xl font-bold text-emerald-950 mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-emerald-950 dark:text-emerald-100 mb-8 leading-snug">
             {currentQuestion.questionText}
           </h2>
 
@@ -207,8 +220,8 @@ function QuizTakepage() {
                   onClick={() => handleAnswerSelect(currentQuestionIndex, option)}
                   className={`w-full text-left p-5 rounded-2xl border transition-all ${
                     isSelected
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-emerald-100 hover:border-emerald-200 bg-white"
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+                      : "border-emerald-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-slate-700 bg-white dark:bg-slate-800/50"
                   }`}
                 >
                   <div className="flex items-center gap-4">
@@ -216,7 +229,7 @@ function QuizTakepage() {
                       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                         isSelected
                           ? "border-emerald-500 bg-emerald-500"
-                          : "border-emerald-200"
+                          : "border-emerald-200 dark:border-slate-700"
                       }`}
                     >
                       {isSelected && (
@@ -224,10 +237,10 @@ function QuizTakepage() {
                       )}
                     </div>
                     <span
-                      className={`text-lg ${
+                      className={`text-base sm:text-lg ${
                         isSelected
-                          ? "text-emerald-900 font-semibold"
-                          : "text-emerald-950"
+                          ? "text-emerald-900 dark:text-emerald-300 font-semibold"
+                          : "text-emerald-950 dark:text-slate-300"
                       }`}
                     >
                       {option}
@@ -244,7 +257,7 @@ function QuizTakepage() {
           <button
             onClick={handlePrevious}
             disabled={currentQuestionIndex === 0}
-            className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-emerald-50 text-emerald-800 font-semibold rounded-xl border border-emerald-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+            className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-slate-800 text-emerald-800 dark:text-slate-200 font-semibold rounded-xl border border-emerald-100 dark:border-slate-800 transition-colors disabled:opacity-30 dark:disabled:opacity-20 disabled:cursor-not-allowed"
           >
             <ChevronLeft className="w-5 h-5" />
             Previous
@@ -281,30 +294,30 @@ function QuizTakepage() {
       </div>
 
       {showExitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white shadow-xl border border-emerald-100">
-            <div className="px-6 py-5 border-b border-emerald-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-emerald-950">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 shadow-xl border border-emerald-100 dark:border-slate-800">
+            <div className="px-6 py-5 border-b border-emerald-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-emerald-950 dark:text-slate-100">
                 Exit Quiz
               </h3>
               <button
                 onClick={() => setShowExitModal(false)}
-                className="text-emerald-700 hover:text-emerald-900"
+                className="text-emerald-700 hover:text-emerald-900 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 X
               </button>
             </div>
 
             <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-emerald-900">
+              <p className="text-sm text-emerald-900 dark:text-slate-300">
                 Are you sure you want to exit? Your progress will be lost.
               </p>
             </div>
 
-            <div className="px-6 py-5 border-t border-emerald-100 flex items-center justify-end gap-3">
+            <div className="px-6 py-5 border-t border-emerald-100 dark:border-slate-800 flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowExitModal(false)}
-                className="px-4 py-2 rounded-xl bg-white border border-emerald-100 text-emerald-800 font-semibold hover:bg-emerald-50"
+                className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-emerald-100 dark:border-slate-700 text-emerald-800 dark:text-slate-200 font-semibold hover:bg-emerald-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </button>
@@ -320,35 +333,35 @@ function QuizTakepage() {
       )}
 
       {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white shadow-xl border border-emerald-100">
-            <div className="px-6 py-5 border-b border-emerald-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-emerald-950">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 shadow-xl border border-emerald-100 dark:border-slate-800">
+            <div className="px-6 py-5 border-b border-emerald-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-emerald-950 dark:text-slate-100">
                 Submit Quiz
               </h3>
               <button
                 onClick={() => setShowSubmitModal(false)}
-                className="text-emerald-700 hover:text-emerald-900"
+                className="text-emerald-700 hover:text-emerald-900 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 X
               </button>
             </div>
 
             <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-emerald-900">
+              <p className="text-sm text-emerald-900 dark:text-slate-300">
                 Are you sure you want to submit this quiz?
               </p>
               {unansweredCount > 0 && (
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-900">
+                <div className="rounded-2xl border border-emerald-100 dark:border-slate-800 bg-emerald-50/60 dark:bg-emerald-950/20 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-300">
                   You have {unansweredCount} unanswered question{unansweredCount > 1 ? "s" : ""}.
                 </div>
               )}
             </div>
 
-            <div className="px-6 py-5 border-t border-emerald-100 flex items-center justify-end gap-3">
+            <div className="px-6 py-5 border-t border-emerald-100 dark:border-slate-800 flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowSubmitModal(false)}
-                className="px-4 py-2 rounded-xl bg-white border border-emerald-100 text-emerald-800 font-semibold hover:bg-emerald-50"
+                className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-emerald-100 dark:border-slate-700 text-emerald-800 dark:text-slate-200 font-semibold hover:bg-emerald-50 dark:hover:bg-slate-700"
                 disabled={submitting}
               >
                 Cancel

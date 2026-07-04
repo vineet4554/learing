@@ -24,7 +24,7 @@ import { useLayout } from "../../context/LayoutContext.jsx";
 function DocumentDetailpage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { setIsSidebarHidden } = useLayout();
+  const { setIsSidebarHidden, setIsHeaderHidden, setIsContentPaddingHidden } = useLayout();
   
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,12 +67,35 @@ function DocumentDetailpage() {
     setFlashcardRefreshKey(0);
     fetchDocument();
     fetchChatHistory();
+    fetchConceptHistory();
   }, [id]);
 
   useEffect(() => {
     setIsSidebarHidden(isAIFocusMode);
-    return () => setIsSidebarHidden(false);
-  }, [isAIFocusMode, setIsSidebarHidden]);
+    setIsHeaderHidden(isAIFocusMode);
+    setIsContentPaddingHidden(isAIFocusMode);
+    return () => {
+      setIsSidebarHidden(false);
+      setIsHeaderHidden(false);
+      setIsContentPaddingHidden(false);
+    };
+  }, [isAIFocusMode, setIsSidebarHidden, setIsHeaderHidden, setIsContentPaddingHidden]);
+
+  const fetchConceptHistory = async () => {
+    try {
+      const response = await aiService.getConceptHistory(id);
+      if (response?.success) {
+        const messages = (response.data || []).map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+        }));
+        setConceptMessages(messages);
+      }
+    } catch (error) {
+      console.error("Error fetching concept history:", error);
+    }
+  };
 
   const fetchChatHistory = async () => {
     try {
@@ -385,7 +408,7 @@ function DocumentDetailpage() {
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/70 bg-gray-50/80 shadow-sm">
+    <div className="overflow-hidden rounded-3xl border border-white/70 dark:border-slate-800 bg-gray-50/80 dark:bg-slate-900/50 shadow-sm transition-colors duration-200">
       <DocumentDetailHeader
         title={document.title}
         onBack={() => navigate("/documents")}
@@ -409,19 +432,24 @@ function DocumentDetailpage() {
       />
 
       {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div className={`${isAIFocusMode ? "w-full max-w-none px-4 sm:px-6 py-6" : "max-w-7xl mx-auto px-4 sm:px-6 py-8"} transition-all duration-200`}>
         {/* Content Tab */}
         {activeTab === "content" && (
           isAIFocusMode ? (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-                <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-1">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-100 dark:border-slate-800 bg-emerald-50/70 dark:bg-slate-850 p-4">
+                <div className="flex items-center gap-2">
+                  <div className="hidden md:block text-sm font-semibold text-emerald-950 dark:text-emerald-300 px-1 truncate max-w-xs lg:max-w-md">
+                    {document.title}
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
                   <button
                     onClick={() => setAssistantMode("chat")}
                     className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                       assistantMode === "chat"
                         ? "bg-emerald-600 text-white"
-                        : "text-emerald-700 hover:bg-emerald-100"
+                        : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-slate-700"
                     }`}
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -432,7 +460,7 @@ function DocumentDetailpage() {
                     className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                       assistantMode === "explain"
                         ? "bg-emerald-600 text-white"
-                        : "text-emerald-700 hover:bg-emerald-100"
+                        : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-slate-700"
                     }`}
                   >
                     <Lightbulb className="h-4 w-4" />
@@ -442,7 +470,7 @@ function DocumentDetailpage() {
 
                 <button
                   onClick={handleExitAIFocus}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-slate-350 transition hover:bg-gray-100 dark:hover:bg-slate-750"
                 >
                   <X className="h-4 w-4" />
                   Close AI Help

@@ -141,6 +141,8 @@ function Dashboardpage() {
   // Extract the nested data object
   const data = dashboardData.data || dashboardData;
   const overview = data.overview || {};
+  const currentStreak = data.currentStreak || 0;
+  const longestStreak = data.longestStreak || 0;
   
   const stats = [
     {
@@ -229,6 +231,35 @@ function Dashboardpage() {
       <div className="mb-4 sm:mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1.5 sm:mb-2">Dashboard</h1>
         <p className="text-gray-500">Track your learning progress and activity</p>
+      </div>
+
+      {/* Streaks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-gray-500 tracking-wide mb-3">CURRENT STREAK</p>
+              <p className="text-3xl sm:text-4xl font-bold text-gray-900">{currentStreak}</p>
+              <p className="text-sm text-gray-500 mt-1">Days in a row with activity</p>
+            </div>
+            <div className={`w-14 h-14 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/25`}>
+              <Clock className="w-6 h-6 text-white" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-gray-500 tracking-wide mb-3">LONGEST STREAK</p>
+              <p className="text-3xl sm:text-4xl font-bold text-gray-900">{longestStreak}</p>
+              <p className="text-sm text-gray-500 mt-1">Your best consecutive days</p>
+            </div>
+            <div className={`w-14 h-14 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20`}>
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Grid */}

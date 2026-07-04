@@ -1,6 +1,7 @@
 import Document from "../models/Document.js";
 import Flashcard from "../models/Flashcard.js";
 import ChatHistory from "../models/ChatHistory.js";
+import ConceptHistory from "../models/ConceptHistory.js";
 
 import * as geminiService from "../utils/geminiService.js";
 import { findRelevantChunks, textChunker } from "../utils/textChunker.js";
@@ -32,8 +33,16 @@ export const generateFlashcards = async (req, res, next) => {
       });
     }
 
+    const rawText = document.extractedText || document.content || "";
+    if (!rawText.trim()) {
+      return res.status(422).json({
+        success: false,
+        message: "No readable text found in this document to generate flashcards.",
+      });
+    }
+
     const cards = await geminiService.generateFlashcards(
-      document.extractedText,
+      rawText,
       parseInt(count)
     );
 
@@ -93,14 +102,19 @@ export const generateQuiz = async (req, res, next) => {
       });
     }
 
-    const quizSourceText = trimmedTopic
-      ? `Generate a quiz focused on this topic: ${trimmedTopic}`
-      : document.extractedText;
+    const rawText = document.extractedText || document.content || "";
+    if (!rawText.trim()) {
+      return res.status(422).json({
+        success: false,
+        message: "No readable text found in this document to generate a quiz.",
+      });
+    }
 
     // Generate quiz using AI
     const aiQuestions = await geminiService.generateQuiz(
-      quizSourceText,
-      parseInt(numberOfQuestions)
+      rawText,
+      parseInt(numberOfQuestions),
+      trimmedTopic
     );
 
 
@@ -159,8 +173,16 @@ export const generateSummary = async (req, res, next) => {
       });
     }
 
+    const rawText = document.extractedText || document.content || "";
+    if (!rawText.trim()) {
+      return res.status(422).json({
+        success: false,
+        message: "No readable text found in this document to generate a summary.",
+      });
+    }
+
     const summary = await geminiService.generateSummary(
-      document.extractedText
+      rawText
     );
 
     res.json({
@@ -197,10 +219,12 @@ export const chat = async (req, res, next) => {
       });
     }
 
+    // Allow chat even if the document status is not yet "ready" as long as
+    // there's readable text or chunks available. This helps when extraction
+    // completed but status wasn't updated yet.
     const document = await Document.findOne({
       _id: documentId,
       userId: req.user._id,
-      status: "ready",
     });
 
     if (!document) {
@@ -230,7 +254,7 @@ export const chat = async (req, res, next) => {
       });
     }
 
-    let chunks = findRelevantChunks(sourceChunks, userMessage, 3, false);
+    let chunks = findRelevantChunks(sourceChunks, userMessage, 3, true);
 
     const hadRelevantChunks = Array.isArray(chunks) && chunks.length > 0;
     if (!hadRelevantChunks) {
@@ -250,10 +274,18 @@ export const chat = async (req, res, next) => {
         "I can read your question, but the AI chat service is currently unavailable. Please verify your Gemini API key in backend/.env and try again.";
     }
 
-    const isFallbackReply = (text = "") =>
-      /i couldn't find this in the provided content|not mentioned in the provided content/i.test(
-        String(text).toLowerCase()
-      );
+    const fallbackPhrases = [
+      "i couldn't find this in the provided content",
+      "not mentioned in the provided content",
+      "i couldn't find an exact answer in the available content",
+      "i could not find an exact match for that question in this file",
+      "i could not find an exact match for that question in this document",
+    ];
+
+    const isFallbackReply = (text = "") => {
+      const low = String(text).toLowerCase();
+      return fallbackPhrases.some((p) => low.includes(p));
+    };
 
     if (hadRelevantChunks && isFallbackReply(reply) && sourceChunks.length > chunks.length) {
       const broaderChunks = sourceChunks.slice(0, Math.min(sourceChunks.length, 10));
@@ -282,6 +314,52 @@ export const chat = async (req, res, next) => {
         console.error("Gemini general fallback error:", fallbackErr);
         reply =
           "I could not find an exact match for that question in this file. Try asking with exact keywords from the content, or ask me to summarize the relevant section first.";
+      }
+    }
+
+    // If Gemini still returned a fallback-style reply, try a simple local text lookup
+    // to catch cases where the document actually contains the answer (e.g., names,
+    // short facts) but the model missed it. This is a lightweight heuristic.
+    const looksLikeFallback = (text = "") => {
+      return isFallbackReply(text);
+    };
+
+    if (looksLikeFallback(reply)) {
+      try {
+        const textToSearch = rawText || (document.chunks || []).map(c => c.content).join('\n\n') || '';
+        if (textToSearch) {
+          // Build candidate keywords from the question (drop short stopwords)
+          const candidates = userMessage
+            .replace(/[?\.,!;:\(\)\"]+/g, ' ')
+            .split(/\s+/)
+            .map(s => s.trim())
+            .filter(s => s.length > 2)
+            .slice(0, 8);
+
+          // Try searching for longest contiguous candidate phrases first
+          let foundSnippet = null;
+          for (let size = Math.min(3, candidates.length); size >= 1 && !foundSnippet; size--) {
+            for (let i = 0; i + size <= candidates.length; i++) {
+              const phrase = candidates.slice(i, i + size).join(' ');
+              const idx = textToSearch.toLowerCase().indexOf(phrase.toLowerCase());
+              if (idx !== -1) {
+                // extract surrounding sentence or snippet
+                const start = Math.max(0, idx - 120);
+                const end = Math.min(textToSearch.length, idx + phrase.length + 120);
+                foundSnippet = textToSearch.substring(start, end).replace(/\s+/g, ' ').trim();
+                break;
+              }
+            }
+          }
+
+          if (foundSnippet) {
+            reply = `Found in document: "${foundSnippet}"`;
+            // treat as coming from the document (no relative chunk indexes)
+            chunks = [];
+          }
+        }
+      } catch (localErr) {
+        console.error('Local text lookup failed:', localErr);
       }
     }
 
@@ -395,6 +473,37 @@ export const explainConcept = async (req, res, next) => {
         "The AI explanation service is currently unavailable. Please try again later.";
     }
 
+    // Save user message and AI response to ConceptHistory
+    let conceptHistory = await ConceptHistory.findOne({
+      userId: req.user._id,
+      documentId: document._id,
+    });
+
+    if (!conceptHistory) {
+      conceptHistory = await ConceptHistory.create({
+        userId: req.user._id,
+        documentId: document._id,
+        messages: [],
+      });
+    }
+
+    conceptHistory.messages.push(
+      {
+        role: "user",
+        content: concept,
+        relativeChunks: [],
+      },
+      {
+        role: "assistant",
+        content: explanation,
+        relativeChunks: hasRelevantChunks
+          ? chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number")
+          : [],
+      }
+    );
+
+    await conceptHistory.save();
+
     res.json({
       success: true,
       message: hasRelevantChunks
@@ -407,6 +516,32 @@ export const explainConcept = async (req, res, next) => {
           ? chunks.map((c) => c.chunkIndex).filter((v) => typeof v === "number")
           : [],
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ================= GET CONCEPT HISTORY =================
+export const getConceptHistory = async (req, res, next) => {
+  try {
+    const { documentId } = req.params;
+
+    if (!documentId) {
+      return res.status(400).json({
+        success: false,
+        message: "documentId is required",
+      });
+    }
+
+    const history = await ConceptHistory.findOne({
+      documentId,
+      userId: req.user._id,
+    });
+
+    res.json({
+      success: true,
+      data: history ? history.messages : [],
     });
   } catch (error) {
     next(error);

@@ -118,6 +118,71 @@ export const getDashboard = async (req, res, next) => {
 
     const studyStreak = recentFlashcardActivity + recentQuizActivity;
 
+    // Build set of activity dates (YYYY-MM-DD) from flashcard reviews, quiz completions, and document uploads
+    const activityDateSet = new Set();
+
+    flashcardSets.forEach(set => {
+      set.cards.forEach(card => {
+        if (card.lastReviewed) {
+          const d = new Date(card.lastReviewed);
+          d.setHours(0, 0, 0, 0);
+          activityDateSet.add(d.toISOString());
+        }
+      });
+    });
+
+    quizzes.forEach(quiz => {
+      if (quiz.updatedAt && quiz.userAnswers && quiz.userAnswers.length > 0) {
+        const d = new Date(quiz.updatedAt);
+        d.setHours(0, 0, 0, 0);
+        activityDateSet.add(d.toISOString());
+      }
+    });
+
+    const documents = await Document.find({ userId }).select('createdAt');
+    documents.forEach(doc => {
+      if (doc.createdAt) {
+        const d = new Date(doc.createdAt);
+        d.setHours(0, 0, 0, 0);
+        activityDateSet.add(d.toISOString());
+      }
+    });
+
+    // Convert to sorted array of dates
+    const activityDates = Array.from(activityDateSet)
+      .map(s => new Date(s))
+      .sort((a, b) => a - b);
+
+    // Compute longest consecutive-day streak
+    let longestStreak = 0;
+    let currentStreak = 0;
+    let streak = 0;
+    for (let i = 0; i < activityDates.length; i++) {
+      if (i === 0) {
+        streak = 1;
+      } else {
+        const prev = activityDates[i - 1];
+        const diffDays = Math.floor((activityDates[i] - prev) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          streak++;
+        } else if (diffDays === 0) {
+          // same day duplicate, ignore
+        } else {
+          if (streak > longestStreak) longestStreak = streak;
+          streak = 1;
+        }
+      }
+      if (i === activityDates.length - 1 && streak > longestStreak) longestStreak = streak;
+    }
+
+    // Compute current streak (ending today)
+    const todayISO = new Date();
+    todayISO.setHours(0, 0, 0, 0);
+    let cursor = new Date(todayISO);
+    while (activityDateSet.has(cursor.toISOString())) {
+      currentStreak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
     const performanceMetrics = {
       flashcardReviewRate:
         totalFlashcards > 0
@@ -160,6 +225,8 @@ export const getDashboard = async (req, res, next) => {
         },
         todayActivity,
         studyStreak,
+        longestStreak,
+        currentStreak,
         performanceMetrics,
       },
     });

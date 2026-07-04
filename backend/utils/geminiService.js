@@ -22,9 +22,9 @@ const getCandidateApiKeys = () => {
   return [...new Set(keys)];
 };
 
-const createModel = (apiKey) => {
+const createModel = (apiKey, modelName = "gemini-2.5-flash") => {
   const genAI = new GoogleGenerativeAI(apiKey);
-  return genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  return genAI.getGenerativeModel({ model: modelName });
 };
 
 const formatGeminiError = (error, fallbackMessage) => {
@@ -47,20 +47,43 @@ const generateWithGemini = async (prompt) => {
     );
   }
 
+  const candidateModels = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash-lite",
+    "gemini-flash-latest",
+    "gemini-pro-latest"
+  ];
+
   let lastError;
 
-  for (const apiKey of candidateKeys) {
-    try {
-      const model = createModel(apiKey);
-      return await model.generateContent(prompt);
-    } catch (error) {
-      lastError = error;
-      const reason = error?.errorDetails?.[0]?.reason || "";
-      const keyInvalid =
-        reason === "API_KEY_INVALID" ||
-        /API Key not found|API_KEY_INVALID/i.test(error?.message || "");
+  for (const modelName of candidateModels) {
+    for (const apiKey of candidateKeys) {
+      try {
+        const model = createModel(apiKey, modelName);
+        return await model.generateContent(prompt);
+      } catch (error) {
+        lastError = error;
+        const reason = error?.errorDetails?.[0]?.reason || "";
+        const keyInvalid =
+          reason === "API_KEY_INVALID" ||
+          /API Key not found|API_KEY_INVALID/i.test(error?.message || "");
 
-      if (!keyInvalid) {
+        if (keyInvalid) {
+          continue;
+        }
+
+        const isQuotaOrModelError =
+          error.status === 429 ||
+          error.status === 404 ||
+          /quota|rate limit|not found|429|404/i.test(error?.message || "");
+
+        if (isQuotaOrModelError) {
+          console.warn(`Model ${modelName} failed with quota/resource error, trying fallback model...`);
+          break;
+        }
+
         throw error;
       }
     }
@@ -118,10 +141,15 @@ Return ONLY valid JSON (no markdown, no text):
 };
 
 // ================= GENERATE QUIZ =================
-export const generateQuiz = async (content, numberOfQuestions = 5) => {
+export const generateQuiz = async (content, numberOfQuestions = 5, topic = "") => {
   try {
+    const topicInstruction = topic
+      ? `The quiz must focus specifically on the topic "${topic}" within the content.`
+      : "The quiz must cover the key concepts of the content.";
+
     const prompt = `
-Create ${numberOfQuestions} MCQ questions from the content.
+Create ${numberOfQuestions} MCQ questions from the content below.
+${topicInstruction}
 
 CONTENT:
 ${content.substring(0, 3000)}

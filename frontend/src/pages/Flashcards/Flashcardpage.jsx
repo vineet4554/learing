@@ -12,17 +12,30 @@ import {
   BookOpen,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useLayout } from "../../context/LayoutContext.jsx";
 
 function Flashcardpage() {
   // ✅ Only documentId exists in URL
   const { id } = useParams();
   const navigate = useNavigate();
+  const { setIsSidebarHidden, setIsHeaderHidden, setIsContentPaddingHidden } = useLayout();
 
   const [flashcards, setFlashcards] = useState([]);
   const [flashcardSetId, setFlashcardSetId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setIsSidebarHidden(true);
+    setIsHeaderHidden(true);
+    setIsContentPaddingHidden(true);
+    return () => {
+      setIsSidebarHidden(false);
+      setIsHeaderHidden(false);
+      setIsContentPaddingHidden(false);
+    };
+  }, [setIsSidebarHidden, setIsHeaderHidden, setIsContentPaddingHidden]);
 
   useEffect(() => {
     if (!id) {
@@ -131,21 +144,21 @@ function Flashcardpage() {
     }
   };
 
-  if (loading) return <Spinner text="Loading flashcards..." />;
+  if (loading) return <Spinner text="Loading flashcards..." fullScreen />;
 
   if (flashcards.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center">
-        <BookOpen className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="min-h-dvh bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col items-center justify-center text-center p-6 transition-colors duration-200">
+        <BookOpen className="w-16 h-16 text-gray-300 dark:text-slate-600 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">
           No flashcards found
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 dark:text-slate-400 mb-6">
           Generate flashcards to start studying.
         </p>
         <button
           onClick={() => navigate(-1)}
-          className="px-6 py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition"
+          className="px-6 py-3 bg-purple-600 dark:bg-purple-700 text-white rounded-xl font-semibold hover:bg-purple-700 dark:hover:bg-purple-600 transition shadow-lg"
         >
           Go Back
         </button>
@@ -156,19 +169,19 @@ function Flashcardpage() {
   const currentCard = flashcards[currentIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex flex-col">
+    <div className="min-h-dvh bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col transition-colors duration-200">
       {/* Header */}
-      <div className="px-6 py-5 flex items-center justify-between">
+      <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100 dark:border-slate-800">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition font-medium"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-slate-400 dark:hover:text-slate-100 transition font-medium"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Sets
         </button>
 
         <button
           onClick={handleShuffle}
-          className="flex items-center gap-2 px-4 py-2 bg-white border rounded-xl shadow-sm hover:shadow transition"
+          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm hover:shadow dark:text-slate-200 dark:hover:bg-slate-700 transition"
         >
           <Shuffle className="w-4 h-4" /> Shuffle
         </button>
@@ -176,22 +189,22 @@ function Flashcardpage() {
 
       {/* Card */}
       <div className="flex-1 flex items-center justify-center px-4 pb-16">
-        <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-xl border border-gray-100 p-10 text-center">
+        <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-3xl shadow-xl p-10 text-center">
           {/* Difficulty + Star */}
           <div className="flex justify-between items-start mb-6">
-            <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full uppercase tracking-wide">
+            <span className="px-3 py-1 bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs font-bold rounded-full uppercase tracking-wide">
               {currentCard?.difficulty || "Easy"}
             </span>
 
             <button
               onClick={handleToggleStar}
-              className="p-2 rounded-full hover:bg-gray-100 transition"
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition"
             >
               <Star
                 className={`w-5 h-5 ${
                   currentCard?.isStarred
                     ? "text-yellow-400 fill-yellow-400"
-                    : "text-gray-300"
+                    : "text-gray-300 dark:text-slate-600"
                 }`}
               />
             </button>
@@ -202,11 +215,11 @@ function Flashcardpage() {
             onClick={handleFlip}
             className="cursor-pointer select-none min-h-[160px] flex flex-col items-center justify-center"
           >
-            <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 leading-snug">
+            <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 dark:text-slate-100 leading-snug">
               {isFlipped ? currentCard?.answer : currentCard?.question}
             </h2>
 
-            <div className="mt-6 flex items-center gap-2 text-gray-400 text-sm">
+            <div className="mt-6 flex items-center gap-2 text-gray-400 dark:text-slate-500 text-sm">
               <RotateCw className="w-4 h-4" />
               <span>Tap to reveal {isFlipped ? "question" : "answer"}</span>
             </div>
@@ -217,19 +230,19 @@ function Flashcardpage() {
             <button
               onClick={handlePrevious}
               disabled={currentIndex === 0}
-              className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
+              className="p-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-30 dark:disabled:opacity-20 transition"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
 
-            <span className="text-lg font-semibold text-gray-600">
+            <span className="text-lg font-semibold text-gray-600 dark:text-slate-400">
               {currentIndex + 1} / {flashcards.length}
             </span>
 
             <button
               onClick={handleNext}
               disabled={currentIndex === flashcards.length - 1}
-              className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
+              className="p-3 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-30 dark:disabled:opacity-20 transition"
             >
               <ChevronRight className="w-6 h-6" />
             </button>

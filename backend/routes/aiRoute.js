@@ -5,6 +5,7 @@ import {
   chat,
   explainConcept,
   getChatHistory,
+  getConceptHistory,
   generateQuiz
 } from "../controllers/aiController.js";
 
@@ -19,5 +20,6 @@ router.post("/generate-quiz", generateQuiz);
 router.post("/chat", chat);
 router.post("/explain-concept", explainConcept);
 router.get("/chat-history/:documentId", getChatHistory);
+router.get("/concept-history/:documentId", getConceptHistory);
 
 export default router;

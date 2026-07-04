@@ -51,7 +51,7 @@ function RemarkMarkdown({ content }) {
   const formattedContent = normalizeForReadability(content);
 
   return (
-    <div className="prose prose-base max-w-none leading-relaxed prose-slate prose-headings:font-semibold prose-headings:mb-3 prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-6 prose-ol:pl-6 prose-li:my-1.5 prose-a:text-emerald-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-slate-900 prose-strong:bg-amber-100 prose-strong:px-1 prose-strong:rounded prose-code:text-emerald-700 prose-code:bg-emerald-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-slate-900 prose-pre:text-slate-100">
+    <div className="prose prose-base max-w-none leading-relaxed prose-slate prose-headings:font-semibold prose-headings:mb-3 prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-6 prose-ol:pl-6 prose-li:my-1.5 prose-a:text-emerald-600 prose-a:no-underline hover:prose-a:underline prose-strong:text-slate-900 dark:prose-strong:text-amber-300 prose-strong:bg-amber-100 dark:prose-strong:bg-amber-950/45 prose-strong:px-1 prose-strong:rounded prose-code:text-emerald-700 dark:prose-code:text-emerald-300 prose-code:bg-emerald-50 dark:prose-code:bg-emerald-950/45 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-slate-900 prose-pre:text-slate-100">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{

@@ -63,14 +63,18 @@ export const textChunker = (text, chunkSize = 1000, overlap = 200) => {
  * Find relevant chunks
  */
 export const findRelevantChunks = (
-  chunks,
+  chunksList,
   query,
   maxChunks = 3,
   fallbackToFirst = true
 ) => {
-  if (!Array.isArray(chunks) || chunks.length === 0) {
+  if (!Array.isArray(chunksList) || chunksList.length === 0) {
     return [];
   }
+
+  const chunks = chunksList.map((c) =>
+    c && typeof c.toObject === "function" ? c.toObject() : c
+  );
 
   if (!query) {
     return chunks.slice(0, maxChunks);

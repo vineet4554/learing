@@ -84,6 +84,19 @@ const getChatHistory = async (documentId) => {
   }
 };
 
+const getConceptHistory = async (documentId) => {
+  try {
+    const response = await axiosInstance.get(
+      API_PATHS.AI.GET_CONCEPT_HISTORY(documentId)
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || {
+      message: "Failed to fetch concept history",
+    };
+  }
+};
+
 const aiService = {
   generateFlashcards,
   generateQuiz,
@@ -91,6 +104,7 @@ const aiService = {
   chat,
   explainConcept,
   getChatHistory,
+  getConceptHistory,
 };
 
 export default aiService;

@@ -36,15 +36,15 @@ function DocumentChatTab({
   }, [isActive]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-[600px] flex flex-col">
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden h-[500px] lg:h-[70vh] flex flex-col transition-colors duration-200">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white dark:bg-slate-900">
         {chatMessages.length === 0 ? (
           <div className="text-center py-12">
-            <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">
+            <MessageSquare className="w-16 h-16 text-gray-300 dark:text-slate-700 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-slate-400 mb-2">
               {emptyTitle}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-slate-500">
               {emptyDescription}
             </p>
           </div>
@@ -60,7 +60,7 @@ function DocumentChatTab({
                 className={`max-w-3xl rounded-2xl px-6 py-5 ${
                   msg.role === "user"
                     ? "bg-emerald-500 text-white"
-                    : "bg-gray-100 text-gray-900"
+                    : "bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-slate-100 border border-transparent dark:border-slate-700"
                 }`}
               >
                 {msg.role === "assistant" ? (
@@ -74,22 +74,22 @@ function DocumentChatTab({
         )}
         {chatLoading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-2xl px-6 py-4">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
+            <div className="bg-gray-100 dark:bg-slate-800 rounded-2xl px-6 py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-600 dark:text-slate-400" />
             </div>
           </div>
         )}
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={onChatSubmit} className="border-t border-gray-200 p-4">
+      <form onSubmit={onChatSubmit} className="border-t border-gray-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900">
         <div className="flex gap-3">
           <input
             type="text"
             value={chatInput}
             onChange={onChatInputChange}
             placeholder={inputPlaceholder}
-            className="flex-1 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl outline-none focus:border-emerald-400 transition-colors"
+            className="flex-1 px-4 py-3 bg-gray-50 dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 text-gray-900 dark:text-slate-100 rounded-xl outline-none focus:border-emerald-400 dark:focus:border-emerald-500 transition-colors"
             disabled={chatLoading}
           />
           <button

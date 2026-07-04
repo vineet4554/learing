@@ -7,8 +7,10 @@ function applyTheme(theme) {
   const root = document.documentElement;
   if (theme === "dark") {
     root.classList.add("theme-dark");
+    root.classList.add("dark");
   } else {
     root.classList.remove("theme-dark");
+    root.classList.remove("dark");
   }
 }
 

@@ -4,13 +4,19 @@ const LayoutContext = createContext(null);
 
 export function LayoutProvider({ children }) {
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [isContentPaddingHidden, setIsContentPaddingHidden] = useState(false);
 
   const value = useMemo(
     () => ({
       isSidebarHidden,
       setIsSidebarHidden,
+      isHeaderHidden,
+      setIsHeaderHidden,
+      isContentPaddingHidden,
+      setIsContentPaddingHidden,
     }),
-    [isSidebarHidden]
+    [isSidebarHidden, isHeaderHidden, isContentPaddingHidden]
   );
 
   return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
