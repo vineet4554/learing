@@ -1,6 +1,6 @@
 import React from "react";
 import { BookOpen, Loader2, Plus, Sparkles } from "lucide-react";
-import FlashcardSetsList from "../flashcard/FlashcardSetsList.jsx";
+import FlashcardSetsList from "../flashcard/Flashcardsetslist.jsx";
 
 function DocumentFlashcardsTab({
   documentId,
