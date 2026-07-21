@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import flashcardService from '../../services/FlashcardService.js';
 import Spinner from '../../components/common/Spinner.jsx';
 import ConfirmModal from '../../components/common/ConfirmModal.jsx';
-import FlashcardSetCard from './FlashcardSetCard.jsx';
+import FlashcardSetCard from './Flashcardsetcard.jsx';
 import {
   BookOpen,
 } from 'lucide-react';
