@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Lightbulb, MessageSquare, X } from "lucide-react";
-import axiosInstance from "../../utils/axiosinstance.js";
+import axiosInstance from "../../utils/axiosInstance.js";
 import { API_PATHS, BASE_URL } from "../../utils/apiPaths.js";
 import documentService from "../../services/documentservice.js";
 import aiService from "../../services/aiService.js";
