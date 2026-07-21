@@ -1,4 +1,4 @@
-import axiosInstance from "../utils/axiosInstance.js";
+import axiosInstance from "../utils/axios-instance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 // Get all documents
@@ -148,3 +148,4 @@ const documentService = {
 };
 
 export default documentService;
+

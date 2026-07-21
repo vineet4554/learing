@@ -1,4 +1,4 @@
-import axiosInstance from "../utils/axiosInstance.js";
+import axiosInstance from "../utils/axios-instance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 const getDashboardData = async () => {
@@ -19,3 +19,4 @@ const progressService = {
 };
 
 export default progressService;
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axiosInstance from "../../utils/axiosInstance.js";
+import axiosInstance from "../../utils/axios-instance.js";
 import { API_PATHS } from "../../utils/apiPaths.js";
 import {
   ArrowLeft,
@@ -382,3 +382,4 @@ function QuizTakepage() {
 }
 
 export default QuizTakepage;
+

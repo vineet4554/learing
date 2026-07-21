@@ -1,4 +1,4 @@
-import axiosInstance from "../utils/axiosInstance.js";
+import axiosInstance from "../utils/axios-instance.js";
 import { API_PATHS } from "../utils/apiPaths.js";
 
 const getAllFlashcardSets = async () => {
@@ -79,3 +79,4 @@ const flashcardService = {
 };
 
 export default flashcardService;
+
